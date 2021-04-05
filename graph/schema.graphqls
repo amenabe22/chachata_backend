@@ -1,0 +1,33 @@
+scalar UUID
+
+type User { 
+  id: UUID!
+  password: String!
+  email: String!
+}
+
+input NewUsrInput {
+  email: String!
+  password: String!
+}
+
+type Subscription {
+  adminsNotified: String
+}
+
+type AuthResult {
+  token: String!
+  status: Boolean!
+}
+
+type Query{
+  allUsrs: [User!]!
+  secureInfo: String!
+}
+type Mutation {
+  # this is a test schema
+  removeAllUsrs: Boolean!
+  newUsr(input: NewUsrInput!): String!
+  emailAuthLogin(email: String!, password: String!): AuthResult!
+}
+directive @user(username: String!) on SUBSCRIPTION
