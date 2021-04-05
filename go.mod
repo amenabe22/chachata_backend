@@ -25,6 +25,7 @@ require (
 	github.com/rs/cors v1.7.0
 	github.com/satori/go.uuid v1.2.0 // indirect
 	github.com/vektah/gqlparser/v2 v2.1.0
+	github.com/wuriyanto48/go-pbkdf2 v0.0.0-20200703042718-40609df22419 // indirect
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9 // indirect
 	golang.org/x/sys v0.0.0-20210403161142-5e06dd20ab57 // indirect
 	gopkg.in/urfave/cli.v1 v1.20.0 // indirect
