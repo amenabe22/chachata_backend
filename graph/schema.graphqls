@@ -12,11 +12,20 @@ type Profile {
   username: String!
   phone: String!
   name: String!
+  profilePic: String!
+  complete: Boolean!
 }
 
 input NewUsrInput {
   email: String!
   password: String!
+}
+
+input ProfileStarterInput {
+  username: String!
+  name: String!
+  phone: String!
+  uid: String!
 }
 
 type Subscription {
@@ -31,11 +40,18 @@ type AuthResult {
 type Query{
   allUsrs: [User!]!
   secureInfo: String!
+  userData(id: String!): User!
+}
+type ProfileUpdateResult {
+  message: String!
+  stat: Boolean!
 }
 type Mutation {
   # this is a test schema
   removeAllUsrs: Boolean!
   newUsr(input: NewUsrInput!): String!
   emailAuthLogin(email: String!, password: String!): AuthResult!
+  updateProfileStarter(uid: ProfileStarterInput!): ProfileUpdateResult!
 }
+
 directive @user(username: String!) on SUBSCRIPTION

@@ -33,6 +33,7 @@ func (r *mutationResolver) RemoveAllUsrs(ctx context.Context) (bool, error) {
 func (r *mutationResolver) NewUsr(ctx context.Context, input model.NewUsrInput) (string, error) {
 	// room := r.AdminChans[]
 	allUsrs := []*model.User{}
+
 	coredb.First(&allUsrs, "email = ?", input.Email)
 	if len(allUsrs) != 0 {
 		return "err", errors.New("Email is already taken")
@@ -47,24 +48,24 @@ func (r *mutationResolver) NewUsr(ctx context.Context, input model.NewUsrInput) 
 		SomeFlag: false,
 		Email:    input.Email,
 		Password: hashedPassword,
-		Profile: model.Profile{
-			Name:     "USR NAME",
-			Username: uuid.UUIDv4(),
-			Phone:    uuid.UUIDv4(),
-		},
 	}
+	// coredb.Create(&usr)
+	println(usr.Profile.Name)
+	println("LOOK  UP THERE")
 	// err := coredb.Create(&usr).Error
 	// if err != nil {
 	// 	return "", nil
 	// }
+
+	// usr.Profile = model.Profile{}
 	usr.Profile = model.Profile{
 		ID:       uuid.UUIDv4(),
-		Name:     "USR NAME",
+		Name:     "",
 		Username: uuid.UUIDv4(),
 		Phone:    uuid.UUIDv4(),
 	}
 	coredb.Save(&usr)
-	println(usr.Profile.Username)
+	// println(usr.Profile.Username)
 	return message, nil
 }
 
@@ -89,9 +90,55 @@ func (r *mutationResolver) EmailAuthLogin(ctx context.Context, email string, pas
 	}, nil
 }
 
+func (r *mutationResolver) UpdateProfileStarter(ctx context.Context, uid model.ProfileStarterInput) (*model.ProfileUpdateResult, error) {
+	// profiles := []*model.Profile{}
+	usrs := []*model.User{}
+	coredb.Preload(clause.Associations).Find(&usrs)
+	dupUname := false
+	dupPhone := false
+	for _, usr := range usrs {
+		// exclude user from the set
+		if usr.ID != uid.UID {
+			if usr.Profile.Username == uid.Username {
+				dupUname = true
+			}
+			if usr.Profile.Phone == uid.Phone {
+				dupPhone = true
+			}
+		}
+	}
+	if dupUname {
+		return nil, errors.New("Username is already taken !")
+	}
+	if dupPhone {
+		return nil, errors.New("Phone is already taken !")
+	}
+	// println(dupUname, "DUP CHECK")
+	// if len(profiles) != 0 {
+	// 	return nil, errors.New("Username is already taken")
+	// }
+
+	usr := model.User{}
+	coredb.First(&usr, "id = ?", uid.UID)
+	usr.Profile.ID = uuid.UUIDv4()
+	usr.Profile.Name = uid.Name
+	usr.Profile.Username = uid.Username
+	usr.Profile.Phone = uid.Phone
+	coredb.Save(&usr)
+	// print(usr.Email)
+	result := &model.ProfileUpdateResult{
+		Message: "Success",
+		Stat:    true,
+	}
+	return result, nil
+}
+
 func (r *queryResolver) AllUsrs(ctx context.Context) ([]*model.User, error) {
 	usrs := []*model.User{}
 	coredb.Preload(clause.Associations).Find(&usrs)
+
+	// coredb.Preload("User").Preload("Profile").Find(&usrs)
+	// coredb.Find(&usrs)
 	return usrs, nil
 }
 
@@ -101,6 +148,10 @@ func (r *queryResolver) SecureInfo(ctx context.Context) (string, error) {
 		return "error", fmt.Errorf("access denied")
 	}
 	return "Hey there", nil
+}
+
+func (r *queryResolver) UserData(ctx context.Context, id string) (*model.User, error) {
+	panic(fmt.Errorf("not implemented"))
 }
 
 func (r *subscriptionResolver) AdminsNotified(ctx context.Context) (<-chan *string, error) {
@@ -158,6 +209,4 @@ type subscriptionResolver struct{ *Resolver }
 //  - When renaming or deleting a resolver the old code will be put in here. You can safely delete
 //    it when you're done.
 //  - You have helper methods in this file. Move them out to keep these resolver files clean.
-type userResolver struct{ *Resolver }
-
 var coredb = setup.SetupModels()

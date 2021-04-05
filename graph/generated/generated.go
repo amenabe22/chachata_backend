@@ -52,21 +52,30 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		EmailAuthLogin func(childComplexity int, email string, password string) int
-		NewUsr         func(childComplexity int, input model.NewUsrInput) int
-		RemoveAllUsrs  func(childComplexity int) int
+		EmailAuthLogin       func(childComplexity int, email string, password string) int
+		NewUsr               func(childComplexity int, input model.NewUsrInput) int
+		RemoveAllUsrs        func(childComplexity int) int
+		UpdateProfileStarter func(childComplexity int, uid model.ProfileStarterInput) int
 	}
 
 	Profile struct {
-		ID       func(childComplexity int) int
-		Name     func(childComplexity int) int
-		Phone    func(childComplexity int) int
-		Username func(childComplexity int) int
+		Complete   func(childComplexity int) int
+		ID         func(childComplexity int) int
+		Name       func(childComplexity int) int
+		Phone      func(childComplexity int) int
+		ProfilePic func(childComplexity int) int
+		Username   func(childComplexity int) int
+	}
+
+	ProfileUpdateResult struct {
+		Message func(childComplexity int) int
+		Stat    func(childComplexity int) int
 	}
 
 	Query struct {
 		AllUsrs    func(childComplexity int) int
 		SecureInfo func(childComplexity int) int
+		UserData   func(childComplexity int, id string) int
 	}
 
 	Subscription struct {
@@ -85,10 +94,12 @@ type MutationResolver interface {
 	RemoveAllUsrs(ctx context.Context) (bool, error)
 	NewUsr(ctx context.Context, input model.NewUsrInput) (string, error)
 	EmailAuthLogin(ctx context.Context, email string, password string) (*model.AuthResult, error)
+	UpdateProfileStarter(ctx context.Context, uid model.ProfileStarterInput) (*model.ProfileUpdateResult, error)
 }
 type QueryResolver interface {
 	AllUsrs(ctx context.Context) ([]*model.User, error)
 	SecureInfo(ctx context.Context) (string, error)
+	UserData(ctx context.Context, id string) (*model.User, error)
 }
 type SubscriptionResolver interface {
 	AdminsNotified(ctx context.Context) (<-chan *string, error)
@@ -154,6 +165,25 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.RemoveAllUsrs(childComplexity), true
 
+	case "Mutation.updateProfileStarter":
+		if e.complexity.Mutation.UpdateProfileStarter == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updateProfileStarter_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.UpdateProfileStarter(childComplexity, args["uid"].(model.ProfileStarterInput)), true
+
+	case "Profile.complete":
+		if e.complexity.Profile.Complete == nil {
+			break
+		}
+
+		return e.complexity.Profile.Complete(childComplexity), true
+
 	case "Profile.id":
 		if e.complexity.Profile.ID == nil {
 			break
@@ -175,12 +205,33 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Profile.Phone(childComplexity), true
 
+	case "Profile.profilePic":
+		if e.complexity.Profile.ProfilePic == nil {
+			break
+		}
+
+		return e.complexity.Profile.ProfilePic(childComplexity), true
+
 	case "Profile.username":
 		if e.complexity.Profile.Username == nil {
 			break
 		}
 
 		return e.complexity.Profile.Username(childComplexity), true
+
+	case "ProfileUpdateResult.message":
+		if e.complexity.ProfileUpdateResult.Message == nil {
+			break
+		}
+
+		return e.complexity.ProfileUpdateResult.Message(childComplexity), true
+
+	case "ProfileUpdateResult.stat":
+		if e.complexity.ProfileUpdateResult.Stat == nil {
+			break
+		}
+
+		return e.complexity.ProfileUpdateResult.Stat(childComplexity), true
 
 	case "Query.allUsrs":
 		if e.complexity.Query.AllUsrs == nil {
@@ -195,6 +246,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Query.SecureInfo(childComplexity), true
+
+	case "Query.userData":
+		if e.complexity.Query.UserData == nil {
+			break
+		}
+
+		args, err := ec.field_Query_userData_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.UserData(childComplexity, args["id"].(string)), true
 
 	case "Subscription.adminsNotified":
 		if e.complexity.Subscription.AdminsNotified == nil {
@@ -328,11 +391,20 @@ type Profile {
   username: String!
   phone: String!
   name: String!
+  profilePic: String!
+  complete: Boolean!
 }
 
 input NewUsrInput {
   email: String!
   password: String!
+}
+
+input ProfileStarterInput {
+  username: String!
+  name: String!
+  phone: String!
+  uid: String!
 }
 
 type Subscription {
@@ -347,13 +419,20 @@ type AuthResult {
 type Query{
   allUsrs: [User!]!
   secureInfo: String!
+  userData(id: String!): User!
+}
+type ProfileUpdateResult {
+  message: String!
+  stat: Boolean!
 }
 type Mutation {
   # this is a test schema
   removeAllUsrs: Boolean!
   newUsr(input: NewUsrInput!): String!
   emailAuthLogin(email: String!, password: String!): AuthResult!
+  updateProfileStarter(uid: ProfileStarterInput!): ProfileUpdateResult!
 }
+
 directive @user(username: String!) on SUBSCRIPTION
 `, BuiltIn: false},
 }
@@ -417,6 +496,21 @@ func (ec *executionContext) field_Mutation_newUsr_args(ctx context.Context, rawA
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_updateProfileStarter_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 model.ProfileStarterInput
+	if tmp, ok := rawArgs["uid"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("uid"))
+		arg0, err = ec.unmarshalNProfileStarterInput2githubᚗcomᚋamenabe22ᚋchachata_backendᚋgraphᚋmodelᚐProfileStarterInput(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["uid"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
@@ -429,6 +523,21 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 		}
 	}
 	args["name"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_userData_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
 	return args, nil
 }
 
@@ -696,6 +805,48 @@ func (ec *executionContext) _Mutation_emailAuthLogin(ctx context.Context, field 
 	return ec.marshalNAuthResult2ᚖgithubᚗcomᚋamenabe22ᚋchachata_backendᚋgraphᚋmodelᚐAuthResult(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _Mutation_updateProfileStarter(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_updateProfileStarter_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().UpdateProfileStarter(rctx, args["uid"].(model.ProfileStarterInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.ProfileUpdateResult)
+	fc.Result = res
+	return ec.marshalNProfileUpdateResult2ᚖgithubᚗcomᚋamenabe22ᚋchachata_backendᚋgraphᚋmodelᚐProfileUpdateResult(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Profile_id(ctx context.Context, field graphql.CollectedField, obj *model.Profile) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -836,6 +987,146 @@ func (ec *executionContext) _Profile_name(ctx context.Context, field graphql.Col
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _Profile_profilePic(ctx context.Context, field graphql.CollectedField, obj *model.Profile) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Profile",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ProfilePic, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Profile_complete(ctx context.Context, field graphql.CollectedField, obj *model.Profile) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Profile",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Complete, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _ProfileUpdateResult_message(ctx context.Context, field graphql.CollectedField, obj *model.ProfileUpdateResult) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "ProfileUpdateResult",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Message, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _ProfileUpdateResult_stat(ctx context.Context, field graphql.CollectedField, obj *model.ProfileUpdateResult) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "ProfileUpdateResult",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Stat, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Query_allUsrs(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -904,6 +1195,48 @@ func (ec *executionContext) _Query_secureInfo(ctx context.Context, field graphql
 	res := resTmp.(string)
 	fc.Result = res
 	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Query_userData(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Query_userData_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().UserData(rctx, args["id"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.User)
+	fc.Result = res
+	return ec.marshalNUser2ᚖgithubᚗcomᚋamenabe22ᚋchachata_backendᚋgraphᚋmodelᚐUser(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query___type(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -2274,6 +2607,50 @@ func (ec *executionContext) unmarshalInputNewUsrInput(ctx context.Context, obj i
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputProfileStarterInput(ctx context.Context, obj interface{}) (model.ProfileStarterInput, error) {
+	var it model.ProfileStarterInput
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "username":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("username"))
+			it.Username, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "name":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			it.Name, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "phone":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("phone"))
+			it.Phone, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "uid":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("uid"))
+			it.UID, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 // endregion **************************** input.gotpl *****************************
 
 // region    ************************** interface.gotpl ***************************
@@ -2344,6 +2721,11 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
+		case "updateProfileStarter":
+			out.Values[i] = ec._Mutation_updateProfileStarter(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -2383,6 +2765,48 @@ func (ec *executionContext) _Profile(ctx context.Context, sel ast.SelectionSet, 
 			}
 		case "name":
 			out.Values[i] = ec._Profile_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "profilePic":
+			out.Values[i] = ec._Profile_profilePic(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "complete":
+			out.Values[i] = ec._Profile_complete(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var profileUpdateResultImplementors = []string{"ProfileUpdateResult"}
+
+func (ec *executionContext) _ProfileUpdateResult(ctx context.Context, sel ast.SelectionSet, obj *model.ProfileUpdateResult) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, profileUpdateResultImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ProfileUpdateResult")
+		case "message":
+			out.Values[i] = ec._ProfileUpdateResult_message(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "stat":
+			out.Values[i] = ec._ProfileUpdateResult_stat(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
@@ -2435,6 +2859,20 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_secureInfo(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "userData":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_userData(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&invalids, 1)
 				}
@@ -2800,6 +3238,25 @@ func (ec *executionContext) marshalNProfile2githubᚗcomᚋamenabe22ᚋchachata_
 	return ec._Profile(ctx, sel, &v)
 }
 
+func (ec *executionContext) unmarshalNProfileStarterInput2githubᚗcomᚋamenabe22ᚋchachata_backendᚋgraphᚋmodelᚐProfileStarterInput(ctx context.Context, v interface{}) (model.ProfileStarterInput, error) {
+	res, err := ec.unmarshalInputProfileStarterInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNProfileUpdateResult2githubᚗcomᚋamenabe22ᚋchachata_backendᚋgraphᚋmodelᚐProfileUpdateResult(ctx context.Context, sel ast.SelectionSet, v model.ProfileUpdateResult) graphql.Marshaler {
+	return ec._ProfileUpdateResult(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNProfileUpdateResult2ᚖgithubᚗcomᚋamenabe22ᚋchachata_backendᚋgraphᚋmodelᚐProfileUpdateResult(ctx context.Context, sel ast.SelectionSet, v *model.ProfileUpdateResult) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._ProfileUpdateResult(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalNString2string(ctx context.Context, v interface{}) (string, error) {
 	res, err := graphql.UnmarshalString(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -2828,6 +3285,10 @@ func (ec *executionContext) marshalNUUID2string(ctx context.Context, sel ast.Sel
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) marshalNUser2githubᚗcomᚋamenabe22ᚋchachata_backendᚋgraphᚋmodelᚐUser(ctx context.Context, sel ast.SelectionSet, v model.User) graphql.Marshaler {
+	return ec._User(ctx, sel, &v)
 }
 
 func (ec *executionContext) marshalNUser2ᚕᚖgithubᚗcomᚋamenabe22ᚋchachata_backendᚋgraphᚋmodelᚐUserᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.User) graphql.Marshaler {

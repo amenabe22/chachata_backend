@@ -13,17 +13,19 @@ type User struct {
 	// main content goes here
 	Email     string `gorm:"uniqueIndex,unique"`
 	Password  string
-	ProfileID string `gorm:"type:char(36);primary_key"`
+	ProfileId string
 	Profile   Profile
 }
 
 // Profile is the model for the profile table.
 type Profile struct {
-	ID        string `gorm:"type:char(36);primary_key"`
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	DeletedAt *time.Time `sql:"index"`
-	Name      string     `gorm:"column:name;size:128;not null;"`
-	Username  string     `gorm:"uniqueIndex,unique"`
-	Phone     string     `gorm:"uniqueIndex,unique"`
+	ID         string `gorm:"type:char(36);primary_key"`
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	DeletedAt  *time.Time `sql:"index"`
+	Name       string     `gorm:"column:name;size:128;not null;"`
+	Username   string     `gorm:"uniqueIndex,unique"`
+	Phone      string     `gorm:"uniqueIndex,unique"`
+	ProfilePic string
+	Complete   bool
 }

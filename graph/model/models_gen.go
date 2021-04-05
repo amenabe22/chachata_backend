@@ -11,3 +11,15 @@ type NewUsrInput struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
+
+type ProfileStarterInput struct {
+	Username string `json:"username"`
+	Name     string `json:"name"`
+	Phone    string `json:"phone"`
+	UID      string `json:"uid"`
+}
+
+type ProfileUpdateResult struct {
+	Message string `json:"message"`
+	Stat    bool   `json:"stat"`
+}

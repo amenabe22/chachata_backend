@@ -24,7 +24,7 @@ import (
 	// _ "github.com/jinzhu/gorm/dialects/postgres" // using postgres sql
 )
 
-const defaultPort = "8081"
+const defaultPort = "8080"
 
 // TODO: move to conf package
 type ckey string
