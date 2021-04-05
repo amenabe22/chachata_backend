@@ -76,6 +76,7 @@ func (r *mutationResolver) EmailAuthLogin(ctx context.Context, email string, pas
 }
 
 func (r *queryResolver) AllUsrs(ctx context.Context) ([]*model.User, error) {
+	println("NIGGAs")
 	usrs := []*model.User{}
 	coredb.Find(&usrs)
 	return usrs, nil
