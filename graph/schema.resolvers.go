@@ -17,6 +17,7 @@ import (
 	"github.com/amenabe22/chachata_backend/graph/setup"
 	"github.com/amenabe22/chachata_backend/middlewares"
 	"github.com/dgryski/trifles/uuid"
+	"gorm.io/gorm/clause"
 )
 
 func (r *mutationResolver) RemoveAllUsrs(ctx context.Context) (bool, error) {
@@ -46,11 +47,24 @@ func (r *mutationResolver) NewUsr(ctx context.Context, input model.NewUsrInput) 
 		SomeFlag: false,
 		Email:    input.Email,
 		Password: hashedPassword,
+		Profile: model.Profile{
+			Name:     "USR NAME",
+			Username: uuid.UUIDv4(),
+			Phone:    uuid.UUIDv4(),
+		},
 	}
-	err := coredb.Create(&usr).Error
-	if err != nil {
-		return "", nil
+	// err := coredb.Create(&usr).Error
+	// if err != nil {
+	// 	return "", nil
+	// }
+	usr.Profile = model.Profile{
+		ID:       uuid.UUIDv4(),
+		Name:     "USR NAME",
+		Username: uuid.UUIDv4(),
+		Phone:    uuid.UUIDv4(),
 	}
+	coredb.Save(&usr)
+	println(usr.Profile.Username)
 	return message, nil
 }
 
@@ -77,18 +91,16 @@ func (r *mutationResolver) EmailAuthLogin(ctx context.Context, email string, pas
 
 func (r *queryResolver) AllUsrs(ctx context.Context) ([]*model.User, error) {
 	usrs := []*model.User{}
-	coredb.Find(&usrs)
+	coredb.Preload(clause.Associations).Find(&usrs)
 	return usrs, nil
 }
 
 func (r *queryResolver) SecureInfo(ctx context.Context) (string, error) {
-
 	user := middlewares.ForContext(ctx)
 	if user == nil {
 		return "error", fmt.Errorf("access denied")
 	}
 	return "Hey there", nil
-
 }
 
 func (r *subscriptionResolver) AdminsNotified(ctx context.Context) (<-chan *string, error) {
@@ -146,4 +158,6 @@ type subscriptionResolver struct{ *Resolver }
 //  - When renaming or deleting a resolver the old code will be put in here. You can safely delete
 //    it when you're done.
 //  - You have helper methods in this file. Move them out to keep these resolver files clean.
+type userResolver struct{ *Resolver }
+
 var coredb = setup.SetupModels()

@@ -4,6 +4,14 @@ type User {
   id: UUID!
   password: String!
   email: String!
+  profile: Profile!
+}
+
+type Profile {
+  id: UUID!
+  username: String!
+  phone: String!
+  name: String!
 }
 
 input NewUsrInput {

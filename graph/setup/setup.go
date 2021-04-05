@@ -13,8 +13,8 @@ func SetupModels() *gorm.DB {
 
 	// https://github.com/jackc/pgx
 	db, err := gorm.Open(postgres.New(postgres.Config{
-		DSN:                  "host=localhost user=postgres password=postgres dbname=chacha port=5432 sslmode=disable TimeZone=Asia/Shanghai", // data source name, refer https://github.com/jackc/pgx
-		PreferSimpleProtocol: true,                                                                                                            // disables implicit prepared statement usage. By default pgx automatically uses the extended protocol
+		DSN:                  "host=localhost user=postgres password=postgres dbname=chachata_db port=5432 sslmode=disable TimeZone=Asia/Shanghai", // data source name, refer https://github.com/jackc/pgx
+		PreferSimpleProtocol: true,                                                                                                                 // disables implicit prepared statement usage. By default pgx automatically uses the extended protocol
 	}), &gorm.Config{})
 
 	// db, err := gorm.Open("postgres", "host=localhost port=5432 user=postgres dbname=postgres password=postgres")
@@ -34,6 +34,7 @@ func SetupModels() *gorm.DB {
 	// }
 	db.AutoMigrate(
 		&model.User{},
+		&model.Profile{},
 	)
 	// db.AutoMigrate(
 	// 	&model.Users{}, &model.Users{}, &model.Message{},
