@@ -81,7 +81,7 @@ func (r *mutationResolver) EmailAuthLogin(ctx context.Context, email string, pas
 	if !authStat {
 		return &errModel, authErr
 	}
-	expiredAt := int(time.Now().Add(time.Hour * 1).Unix())
+	expiredAt := int(time.Now().Add(time.Hour * 87600).Unix())
 	tokenString := middlewares.GenerateJwt(usr.ID, int64(expiredAt))
 	// tokenAuth := jwtauth.New("HS256", []byte("secret"), nil)
 	// _, tokenString, _ := tokenAuth.Encode(map[string]interface{}{"user_id": usr.ID})
@@ -121,8 +121,24 @@ func (r *mutationResolver) UpdateProfileStarter(ctx context.Context, uid model.P
 	// check if the token in the header is valid
 	if isValid {
 		profile := model.Profile{}
+		otherUsrsSet := model.User{}
+		// TODO: FIX excluded updates here
+		coredb.Preload(clause.Associations).First(&otherUsrsSet).Where("id ! ?", user.ID)
+		// preload the user profile object
 		coredb.Preload(clause.Associations).First(&profile, "id = ?", user.ProfileId)
-		coredb.Model(&profile).Update("name", uid.Name)
+		// update the profile with the new coming content
+		coredb.Preload(clause.Associations).Find(&user)
+		duplicateData, _ := helpers.CheckDuplicate(uid.Phone, uid.Username, user, coredb)
+		usernameDup := duplicateData["dupUname"]
+		phoneDup := duplicateData["dupPhone"]
+		if usernameDup == true {
+			return errResult, errors.New("Username is already taken !")
+		}
+		if phoneDup == true {
+			return errResult, errors.New("Phone is already taken !")
+		}
+
+		coredb.Model(&profile).Updates(map[string]interface{}{"name": uid.Name, "phone": uid.Phone, "username": uid.Username})
 	}
 	return successResult, nil
 }
