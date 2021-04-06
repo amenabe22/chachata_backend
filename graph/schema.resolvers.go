@@ -7,12 +7,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/amenabe22/chachata_backend/graph/chans"
 	"github.com/amenabe22/chachata_backend/graph/core"
 	"github.com/amenabe22/chachata_backend/graph/generated"
 	"github.com/amenabe22/chachata_backend/graph/helpers"
-	"github.com/amenabe22/chachata_backend/graph/jwt"
 	"github.com/amenabe22/chachata_backend/graph/model"
 	"github.com/amenabe22/chachata_backend/graph/setup"
 	"github.com/amenabe22/chachata_backend/middlewares"
@@ -58,6 +58,8 @@ func (r *mutationResolver) NewUsr(ctx context.Context, input model.NewUsrInput) 
 	// }
 
 	// usr.Profile = model.Profile{}
+	profile, _ := core.GenerateQrOnSignup(usr.ID)
+	println(profile, "PROF")
 	usr.Profile = model.Profile{
 		ID:       uuid.UUIDv4(),
 		Name:     "",
@@ -79,74 +81,70 @@ func (r *mutationResolver) EmailAuthLogin(ctx context.Context, email string, pas
 	if !authStat {
 		return &errModel, authErr
 	}
+	expiredAt := int(time.Now().Add(time.Hour * 1).Unix())
+	tokenString := middlewares.GenerateJwt(usr.ID, int64(expiredAt))
+	// tokenAuth := jwtauth.New("HS256", []byte("secret"), nil)
+	// _, tokenString, _ := tokenAuth.Encode(map[string]interface{}{"user_id": usr.ID})
+	// fmt.Printf("DEBUG: sample jwt is %s\n\n", tokenString)
+	// token := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiQW1lbiBBYmUifQ.WKJ7WKx9Pg76uoqhKkR-Cjb8lxigvEO-ruCroAsy9KM"
+	// fmt.Println(tokenAuth.Decode(token))
 
-	token, err := jwt.GenerateToken(usr.ID)
-	if err != nil {
-		return &errModel, authErr
-	}
+	// token, err := jwt.GenerateToken(usr.ID)
+	// if err != nil {
+	// 	return &errModel, authErr
+	// }
 	return &model.AuthResult{
-		Token:  token,
+		Token:  tokenString,
 		Status: true,
 	}, nil
 }
 
-func (r *mutationResolver) UpdateProfileStarter(ctx context.Context, uid model.ProfileStarterInput) (*model.ProfileUpdateResult, error) {
-	// profiles := []*model.Profile{}
-	usrs := []*model.User{}
-	coredb.Preload(clause.Associations).Find(&usrs)
-	dupUname := false
-	dupPhone := false
-	for _, usr := range usrs {
-		// exclude user from the set
-		if usr.ID != uid.UID {
-			if usr.Profile.Username == uid.Username {
-				dupUname = true
-			}
-			if usr.Profile.Phone == uid.Phone {
-				dupPhone = true
-			}
-		}
-	}
-	if dupUname {
-		return nil, errors.New("Username is already taken !")
-	}
-	if dupPhone {
-		return nil, errors.New("Phone is already taken !")
-	}
-	// println(dupUname, "DUP CHECK")
-	// if len(profiles) != 0 {
-	// 	return nil, errors.New("Username is already taken")
-	// }
+var userCtxKey = &contextKey{"user"}
 
-	usr := model.User{}
-	coredb.First(&usr, "id = ?", uid.UID)
-	usr.Profile.ID = uuid.UUIDv4()
-	usr.Profile.Name = uid.Name
-	usr.Profile.Username = uid.Username
-	usr.Profile.Phone = uid.Phone
-	coredb.Save(&usr)
-	// print(usr.Email)
-	result := &model.ProfileUpdateResult{
+type contextKey struct {
+	name string
+}
+
+func (r *mutationResolver) UpdateProfileStarter(ctx context.Context, uid model.ProfileStarterInput) (*model.ProfileUpdateResult, error) {
+	errResult := &model.ProfileUpdateResult{
+		Message: "err",
+		Stat:    false,
+	}
+	successResult := &model.ProfileUpdateResult{
 		Message: "Success",
 		Stat:    true,
 	}
-	return result, nil
+	isValid, user, err := middlewares.GetAuthStat(coredb, ctx, "Invalid token")
+	if err != nil {
+		return errResult, err
+	}
+	// check if the token in the header is valid
+	if isValid {
+		profile := model.Profile{}
+		coredb.Preload(clause.Associations).First(&profile, "id = ?", user.ProfileId)
+		coredb.Model(&profile).Update("name", uid.Name)
+	}
+	return successResult, nil
 }
 
 func (r *queryResolver) AllUsrs(ctx context.Context) ([]*model.User, error) {
 	usrs := []*model.User{}
 	coredb.Preload(clause.Associations).Find(&usrs)
-
 	// coredb.Preload("User").Preload("Profile").Find(&usrs)
 	// coredb.Find(&usrs)
 	return usrs, nil
 }
 
 func (r *queryResolver) SecureInfo(ctx context.Context) (string, error) {
-	user := middlewares.ForContext(ctx)
-	if user == nil {
-		return "error", fmt.Errorf("access denied")
+	tokenStat, user, err := middlewares.GetAuthStat(coredb, ctx, "Invalid token")
+	if err != nil {
+		return "", err
 	}
+	if tokenStat {
+		println("Authentication approved !!!")
+		println(user.Email)
+	}
+	println("hi")
 	return "Hey there", nil
 }
 

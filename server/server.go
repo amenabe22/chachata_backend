@@ -21,6 +21,8 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/gorilla/websocket"
 	"github.com/rs/cors"
+
+	"github.com/go-chi/jwtauth/v5"
 	// _ "github.com/jinzhu/gorm/dialects/postgres" // using postgres sql
 )
 
@@ -43,6 +45,8 @@ func New() generated.Config {
 	}
 }
 
+var tokenAuth *jwtauth.JWTAuth
+
 func main() {
 	mux := chi.NewRouter()
 	c := cors.New(cors.Options{
@@ -63,16 +67,20 @@ func main() {
 			},
 		},
 	})
-
+	// authWare, _ := middlewares.Middleware()
 	srv.Use(extension.Introspection{})
-	mux.Use(middlewares.Middleware())
+	// mux.Use(authWare.MiddlewareFunc())
+	// mux.Use(authWare.MiddlewareFunc())
+	mux.Use(middlewares.JwtMiddleware())
+
 	mux.Handle("/", playground.Handler("GraphQL playground", "/query"))
 	mux.Handle("/query", c.Handler(srv))
 	// fs := http.FileServer(http.Dir("./static"))
 	// TODO: move hardcoded staic path to path finder variable
-	fileServer := http.FileServer(http.Dir("/home/anonny/projects/fun/chachata/chachata_backend/static"))
+	fileServer := http.FileServer(http.Dir("/home/anonny/projects/fun/chachata/chachata_backend/static/"))
 	mux.Handle("/static/", http.StripPrefix("/static/", neuter(fileServer)))
 	// http.Handle("/", fileServer)
+
 	setup.SetupModels()
 	log.Printf("connect to http://0.0.0.0:%s/ for GraphQL playground", defaultPort)
 	log.Fatal(http.ListenAndServe(":"+defaultPort, mux))

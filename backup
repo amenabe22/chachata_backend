@@ -1,0 +1,62 @@
+func (r *mutationResolver) UpdateProfileStarter(ctx context.Context, uid model.ProfileStarterInput) (*model.ProfileUpdateResult, error) {
+	// profiles := []*model.Profile{}
+	r.mu.Lock()
+	authUser := middlewares.ForContext(ctx)
+	if authUser == nil {
+		return nil, fmt.Errorf("access denied")
+	}
+	println(authUser.ID, "AUTH USR")
+	r.mu.Unlock()
+	usrs := []*model.User{}
+	coredb.Preload(clause.Associations).Find(&usrs)
+	dupUname := false
+	dupPhone := false
+	for _, usr := range usrs {
+		// exclude user from the set
+		if usr.ID != authUser.ID {
+			if usr.Profile.Username == uid.Username {
+				dupUname = true
+			}
+			if usr.Profile.Phone == uid.Phone {
+				dupPhone = true
+			}
+		}
+	}
+	if dupUname {
+		return nil, errors.New("Username is already taken !")
+	}
+	if dupPhone {
+		return nil, errors.New("Phone is already taken !")
+	}
+	// println(dupUname, "DUP CHECK")
+	// if len(profiles) != 0 {
+	// 	return nil, errors.New("Username is already taken")
+	// }
+
+	usr := model.User{}
+	profile := model.Profile{}
+	coredb.Preload(clause.Associations).Find(&usr).Model(&usr).Where("id = ?", authUser.ID)
+	coredb.Preload(clause.Associations).Find(&profile).Model(&profile).Where("id = ?", authUser.ProfileId)
+	// profInst.Update("name", uid.Name)
+	// println(profile.ID == authUser.Profile.ID)
+	println(authUser.Profile.ID, "IDDD")
+	coredb.Model(&profile).Update("name", uid.Name)
+	println(profile.Name, "PROFILE Name")
+	// coredb.Where(&usr, "id = ?", uid.UID)
+	// usrInst.Update("profile", model.Profile{})
+
+	// usr.Profile
+	// println(usr.Profile., "HEY")
+	// coredb.Update("",)
+	// usr.Profile.ID = uuid.UUIDv4()
+	// usr.Profile.Name = uid.Name
+	// usr.Profile.Username = uid.Username
+	// usr.Profile.Phone = uid.Phone
+	// coredb.Save(&usr)
+	// print(usr.Email)
+	result := &model.ProfileUpdateResult{
+		Message: "Success",
+		Stat:    true,
+	}
+	return result, nil
+}

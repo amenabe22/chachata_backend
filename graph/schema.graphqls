@@ -5,6 +5,7 @@ type User {
   password: String!
   email: String!
   profile: Profile!
+  isVerified: Boolean!
 }
 
 type Profile {

@@ -11,10 +11,11 @@ type User struct {
 	DeletedAt *time.Time `sql:"index"`
 	SomeFlag  bool       `gorm:"column:some_flag;not null;default:true"`
 	// main content goes here
-	Email     string `gorm:"uniqueIndex,unique"`
-	Password  string
-	ProfileId string
-	Profile   Profile
+	Email      string `gorm:"uniqueIndex,unique"`
+	Password   string
+	ProfileId  string
+	Profile    Profile
+	IsVerified bool
 }
 
 // Profile is the model for the profile table.
