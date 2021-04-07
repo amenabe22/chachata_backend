@@ -14,7 +14,6 @@ import (
 	"github.com/amenabe22/chachata_backend/graph/generated"
 	"github.com/amenabe22/chachata_backend/graph/helpers"
 	"github.com/amenabe22/chachata_backend/graph/model"
-	"github.com/amenabe22/chachata_backend/graph/setup"
 	"github.com/amenabe22/chachata_backend/middlewares"
 	"github.com/dgryski/trifles/uuid"
 	"gorm.io/gorm/clause"
@@ -22,8 +21,8 @@ import (
 
 func (r *mutationResolver) RemoveAllUsrs(ctx context.Context) (bool, error) {
 	usrs := []*model.User{}
-	coredb.Find(&usrs)
-	err := coredb.Delete(&usrs).Error
+	r.Coredb.Find(&usrs)
+	err := r.Coredb.Delete(&usrs).Error
 	if err != nil {
 		return false, errors.New("Error removing users")
 	}
@@ -34,7 +33,7 @@ func (r *mutationResolver) NewUsr(ctx context.Context, input model.NewUsrInput) 
 	// room := r.AdminChans[]
 	allUsrs := []*model.User{}
 
-	coredb.First(&allUsrs, "email = ?", input.Email)
+	r.Coredb.First(&allUsrs, "email = ?", input.Email)
 	if len(allUsrs) != 0 {
 		return "err", errors.New("Email is already taken")
 	}
@@ -43,31 +42,29 @@ func (r *mutationResolver) NewUsr(ctx context.Context, input model.NewUsrInput) 
 	if perr != nil {
 		return "error", perr
 	}
+	usrId := uuid.UUIDv4()
+	qrProfile, _ := core.GenerateQrOnSignup(usrId)
 	usr := model.User{
-		ID:       uuid.UUIDv4(),
+		ID:       usrId,
 		SomeFlag: false,
 		Email:    input.Email,
 		Password: hashedPassword,
+		Qrcode:   qrProfile,
 	}
-	// coredb.Create(&usr)
-	println(usr.Profile.Name)
-	println("LOOK  UP THERE")
-	// err := coredb.Create(&usr).Error
-	// if err != nil {
-	// 	return "", nil
-	// }
 
-	// usr.Profile = model.Profile{}
-	profile, _ := core.GenerateQrOnSignup(usr.ID)
-	println(profile, "PROF")
 	usr.Profile = model.Profile{
 		ID:       uuid.UUIDv4(),
 		Name:     "",
 		Username: uuid.UUIDv4(),
 		Phone:    uuid.UUIDv4(),
+		// Qrcode:   qrProfile,
 	}
-	coredb.Save(&usr)
-	// println(usr.Profile.Username)
+	usr.UserDevices = append(usr.UserDevices, model.Devices{
+		ID:         uuid.UUIDv4(),
+		DeviceName: input.DeviceInput.DeviceName,
+		AppID:      input.DeviceInput.AppID,
+	})
+	r.Coredb.Save(&usr)
 	return message, nil
 }
 
@@ -99,12 +96,6 @@ func (r *mutationResolver) EmailAuthLogin(ctx context.Context, email string, pas
 	}, nil
 }
 
-var userCtxKey = &contextKey{"user"}
-
-type contextKey struct {
-	name string
-}
-
 func (r *mutationResolver) UpdateProfileStarter(ctx context.Context, uid model.ProfileStarterInput) (*model.ProfileUpdateResult, error) {
 	errResult := &model.ProfileUpdateResult{
 		Message: "err",
@@ -114,7 +105,7 @@ func (r *mutationResolver) UpdateProfileStarter(ctx context.Context, uid model.P
 		Message: "Success",
 		Stat:    true,
 	}
-	isValid, user, err := middlewares.GetAuthStat(coredb, ctx, "Invalid token")
+	isValid, user, err := middlewares.GetAuthStat(r.Coredb, ctx, "Invalid token")
 	if err != nil {
 		return errResult, err
 	}
@@ -123,12 +114,12 @@ func (r *mutationResolver) UpdateProfileStarter(ctx context.Context, uid model.P
 		profile := model.Profile{}
 		otherUsrsSet := model.User{}
 		// TODO: FIX excluded updates here
-		coredb.Preload(clause.Associations).First(&otherUsrsSet).Where("id ! ?", user.ID)
+		r.Coredb.Preload(clause.Associations).First(&otherUsrsSet).Where("id ! ?", user.ID)
 		// preload the user profile object
-		coredb.Preload(clause.Associations).First(&profile, "id = ?", user.ProfileId)
+		r.Coredb.Preload(clause.Associations).First(&profile, "id = ?", user.ProfileId)
 		// update the profile with the new coming content
-		coredb.Preload(clause.Associations).Find(&user)
-		duplicateData, _ := helpers.CheckDuplicate(uid.Phone, uid.Username, user, coredb)
+		r.Coredb.Preload(clause.Associations).Find(&user)
+		duplicateData, _ := helpers.CheckDuplicate(uid.Phone, uid.Username, user, r.Coredb)
 		usernameDup := duplicateData["dupUname"]
 		phoneDup := duplicateData["dupPhone"]
 		if usernameDup == true {
@@ -138,21 +129,21 @@ func (r *mutationResolver) UpdateProfileStarter(ctx context.Context, uid model.P
 			return errResult, errors.New("Phone is already taken !")
 		}
 
-		coredb.Model(&profile).Updates(map[string]interface{}{"name": uid.Name, "phone": uid.Phone, "username": uid.Username})
+		r.Coredb.Model(&profile).Updates(map[string]interface{}{"name": uid.Name, "phone": uid.Phone, "username": uid.Username})
 	}
 	return successResult, nil
 }
 
 func (r *queryResolver) AllUsrs(ctx context.Context) ([]*model.User, error) {
 	usrs := []*model.User{}
-	coredb.Preload(clause.Associations).Find(&usrs)
-	// coredb.Preload("User").Preload("Profile").Find(&usrs)
-	// coredb.Find(&usrs)
+	r.Coredb.Preload("Profile").Preload("UserDevices").Find(&usrs)
+	// r.Coredb.Preload("User").Preload("Profile").Find(&usrs)
+	// r.Coredb.Find(&usrs)
 	return usrs, nil
 }
 
 func (r *queryResolver) SecureInfo(ctx context.Context) (string, error) {
-	tokenStat, user, err := middlewares.GetAuthStat(coredb, ctx, "Invalid token")
+	tokenStat, user, err := middlewares.GetAuthStat(r.Coredb, ctx, "Invalid token")
 	if err != nil {
 		return "", err
 	}
@@ -216,11 +207,3 @@ func (r *Resolver) Subscription() generated.SubscriptionResolver { return &subsc
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type subscriptionResolver struct{ *Resolver }
-
-// !!! WARNING !!!
-// The code below was going to be deleted when updating resolvers. It has been copied here so you have
-// one last chance to move it out of harms way if you want. There are two reasons this happens:
-//  - When renaming or deleting a resolver the old code will be put in here. You can safely delete
-//    it when you're done.
-//  - You have helper methods in this file. Move them out to keep these resolver files clean.
-var coredb = setup.SetupModels()

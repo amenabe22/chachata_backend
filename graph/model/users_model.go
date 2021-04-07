@@ -16,6 +16,9 @@ type User struct {
 	ProfileId  string
 	Profile    Profile
 	IsVerified bool
+	Qrcode     string
+	// UserDevices []Devices `gorm:"many2many:devices;" json:"devices,omitempty"`
+	UserDevices []Devices `gorm:"polymorphic:Owner"`
 }
 
 // Profile is the model for the profile table.
@@ -29,4 +32,18 @@ type Profile struct {
 	Phone      string     `gorm:"uniqueIndex,unique"`
 	ProfilePic string
 	Complete   bool
+	Progress   int
+	Bio        string
+}
+
+type Devices struct {
+	ID        string `gorm:"type:char(36);primary_key"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt *time.Time `sql:"index"`
+	// UserID     string     `json:"user_id" gorm:"user_id"` //nolint:gofmt
+	AppID      string
+	DeviceName string
+	OwnerID    string
+	OwnerType  string
 }

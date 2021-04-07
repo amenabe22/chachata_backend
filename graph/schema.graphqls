@@ -1,11 +1,19 @@
 scalar UUID
 
+type Devices {
+  id: UUID!
+  appId: String!
+  DeviceName: String!
+}
+
 type User { 
   id: UUID!
   password: String!
   email: String!
   profile: Profile!
   isVerified: Boolean!
+  userDevices: [Devices!]!
+  qrcode: String!
 }
 
 type Profile {
@@ -20,6 +28,7 @@ type Profile {
 input NewUsrInput {
   email: String!
   password: String!
+  deviceInput: DeviceDataInput!
 }
 
 input ProfileStarterInput {
@@ -27,6 +36,11 @@ input ProfileStarterInput {
   name: String!
   phone: String!
   uid: String!
+}
+
+input DeviceDataInput {
+  appId: String!
+  deviceName: String!
 }
 
 type Subscription {

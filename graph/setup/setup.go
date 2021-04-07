@@ -32,10 +32,19 @@ func SetupModels() *gorm.DB {
 	// for _, u := range usrs {
 	// 	db.Create(&u)
 	// }
+	// db.Exec("CREATE DATABASE chachata_db")
+	// db.LogMode(true)
+
+	// db.Exec("use chachata_db")
 	db.AutoMigrate(
 		&model.User{},
 		&model.Profile{},
+		&model.Devices{},
 	)
+	// db.Migrator().CreateConstraint(&model.Profile{}, "fk_users_devices")
+	// db.Migrator().CreateConstraint(&model.Devices{}), "Profiles")
+	// db.Model(&model.Devices{}).Add("cust_id", "customers(cust_id)", "CASCADE", "CASCADE")
+
 	// db.AutoMigrate(
 	// 	&model.Users{}, &model.Users{}, &model.Message{},
 	// 	&model.Chatroom{}, &model.Usr{}, &model.Company{},

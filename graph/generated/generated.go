@@ -51,6 +51,12 @@ type ComplexityRoot struct {
 		Token  func(childComplexity int) int
 	}
 
+	Devices struct {
+		AppID      func(childComplexity int) int
+		DeviceName func(childComplexity int) int
+		ID         func(childComplexity int) int
+	}
+
 	Mutation struct {
 		EmailAuthLogin       func(childComplexity int, email string, password string) int
 		NewUsr               func(childComplexity int, input model.NewUsrInput) int
@@ -83,11 +89,13 @@ type ComplexityRoot struct {
 	}
 
 	User struct {
-		Email      func(childComplexity int) int
-		ID         func(childComplexity int) int
-		IsVerified func(childComplexity int) int
-		Password   func(childComplexity int) int
-		Profile    func(childComplexity int) int
+		Email       func(childComplexity int) int
+		ID          func(childComplexity int) int
+		IsVerified  func(childComplexity int) int
+		Password    func(childComplexity int) int
+		Profile     func(childComplexity int) int
+		Qrcode      func(childComplexity int) int
+		UserDevices func(childComplexity int) int
 	}
 }
 
@@ -134,6 +142,27 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.AuthResult.Token(childComplexity), true
+
+	case "Devices.appId":
+		if e.complexity.Devices.AppID == nil {
+			break
+		}
+
+		return e.complexity.Devices.AppID(childComplexity), true
+
+	case "Devices.DeviceName":
+		if e.complexity.Devices.DeviceName == nil {
+			break
+		}
+
+		return e.complexity.Devices.DeviceName(childComplexity), true
+
+	case "Devices.id":
+		if e.complexity.Devices.ID == nil {
+			break
+		}
+
+		return e.complexity.Devices.ID(childComplexity), true
 
 	case "Mutation.emailAuthLogin":
 		if e.complexity.Mutation.EmailAuthLogin == nil {
@@ -302,6 +331,20 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.User.Profile(childComplexity), true
 
+	case "User.qrcode":
+		if e.complexity.User.Qrcode == nil {
+			break
+		}
+
+		return e.complexity.User.Qrcode(childComplexity), true
+
+	case "User.userDevices":
+		if e.complexity.User.UserDevices == nil {
+			break
+		}
+
+		return e.complexity.User.UserDevices(childComplexity), true
+
 	}
 	return 0, false
 }
@@ -387,12 +430,20 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 var sources = []*ast.Source{
 	{Name: "graph/schema.graphqls", Input: `scalar UUID
 
+type Devices {
+  id: UUID!
+  appId: String!
+  DeviceName: String!
+}
+
 type User { 
   id: UUID!
   password: String!
   email: String!
   profile: Profile!
   isVerified: Boolean!
+  userDevices: [Devices!]!
+  qrcode: String!
 }
 
 type Profile {
@@ -407,6 +458,7 @@ type Profile {
 input NewUsrInput {
   email: String!
   password: String!
+  deviceInput: DeviceDataInput!
 }
 
 input ProfileStarterInput {
@@ -414,6 +466,11 @@ input ProfileStarterInput {
   name: String!
   phone: String!
   uid: String!
+}
+
+input DeviceDataInput {
+  appId: String!
+  deviceName: String!
 }
 
 type Subscription {
@@ -693,6 +750,111 @@ func (ec *executionContext) _AuthResult_status(ctx context.Context, field graphq
 	res := resTmp.(bool)
 	fc.Result = res
 	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Devices_id(ctx context.Context, field graphql.CollectedField, obj *model.Devices) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Devices",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNUUID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Devices_appId(ctx context.Context, field graphql.CollectedField, obj *model.Devices) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Devices",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.AppID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Devices_DeviceName(ctx context.Context, field graphql.CollectedField, obj *model.Devices) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Devices",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.DeviceName, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_removeAllUsrs(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -1534,6 +1696,76 @@ func (ec *executionContext) _User_isVerified(ctx context.Context, field graphql.
 	res := resTmp.(bool)
 	fc.Result = res
 	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _User_userDevices(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "User",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.UserDevices, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]model.Devices)
+	fc.Result = res
+	return ec.marshalNDevices2ᚕgithubᚗcomᚋamenabe22ᚋchachata_backendᚋgraphᚋmodelᚐDevicesᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _User_qrcode(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "User",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Qrcode, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) ___Directive_name(ctx context.Context, field graphql.CollectedField, obj *introspection.Directive) (ret graphql.Marshaler) {
@@ -2623,6 +2855,34 @@ func (ec *executionContext) ___Type_ofType(ctx context.Context, field graphql.Co
 
 // region    **************************** input.gotpl *****************************
 
+func (ec *executionContext) unmarshalInputDeviceDataInput(ctx context.Context, obj interface{}) (model.DeviceDataInput, error) {
+	var it model.DeviceDataInput
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "appId":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("appId"))
+			it.AppID, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "deviceName":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("deviceName"))
+			it.DeviceName, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputNewUsrInput(ctx context.Context, obj interface{}) (model.NewUsrInput, error) {
 	var it model.NewUsrInput
 	var asMap = obj.(map[string]interface{})
@@ -2642,6 +2902,14 @@ func (ec *executionContext) unmarshalInputNewUsrInput(ctx context.Context, obj i
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("password"))
 			it.Password, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "deviceInput":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("deviceInput"))
+			it.DeviceInput, err = ec.unmarshalNDeviceDataInput2ᚖgithubᚗcomᚋamenabe22ᚋchachata_backendᚋgraphᚋmodelᚐDeviceDataInput(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -2721,6 +2989,43 @@ func (ec *executionContext) _AuthResult(ctx context.Context, sel ast.SelectionSe
 			}
 		case "status":
 			out.Values[i] = ec._AuthResult_status(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var devicesImplementors = []string{"Devices"}
+
+func (ec *executionContext) _Devices(ctx context.Context, sel ast.SelectionSet, obj *model.Devices) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, devicesImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Devices")
+		case "id":
+			out.Values[i] = ec._Devices_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "appId":
+			out.Values[i] = ec._Devices_appId(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "DeviceName":
+			out.Values[i] = ec._Devices_DeviceName(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
@@ -2990,6 +3295,16 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 			}
 		case "isVerified":
 			out.Values[i] = ec._User_isVerified(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "userDevices":
+			out.Values[i] = ec._User_userDevices(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "qrcode":
+			out.Values[i] = ec._User_qrcode(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
@@ -3276,6 +3591,52 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) unmarshalNDeviceDataInput2ᚖgithubᚗcomᚋamenabe22ᚋchachata_backendᚋgraphᚋmodelᚐDeviceDataInput(ctx context.Context, v interface{}) (*model.DeviceDataInput, error) {
+	res, err := ec.unmarshalInputDeviceDataInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNDevices2githubᚗcomᚋamenabe22ᚋchachata_backendᚋgraphᚋmodelᚐDevices(ctx context.Context, sel ast.SelectionSet, v model.Devices) graphql.Marshaler {
+	return ec._Devices(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNDevices2ᚕgithubᚗcomᚋamenabe22ᚋchachata_backendᚋgraphᚋmodelᚐDevicesᚄ(ctx context.Context, sel ast.SelectionSet, v []model.Devices) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNDevices2githubᚗcomᚋamenabe22ᚋchachata_backendᚋgraphᚋmodelᚐDevices(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+	return ret
 }
 
 func (ec *executionContext) unmarshalNNewUsrInput2githubᚗcomᚋamenabe22ᚋchachata_backendᚋgraphᚋmodelᚐNewUsrInput(ctx context.Context, v interface{}) (model.NewUsrInput, error) {

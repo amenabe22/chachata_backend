@@ -16,5 +16,5 @@ func GenerateQrOnSignup(uid string) (string, error) {
 	if err != nil {
 		return "error", err
 	}
-	return "done", nil
+	return fmt.Sprintf("%s.png", uid), nil
 }

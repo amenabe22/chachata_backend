@@ -21,6 +21,7 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/gorilla/websocket"
 	"github.com/rs/cors"
+	"gorm.io/gorm"
 
 	"github.com/go-chi/jwtauth/v5"
 	// _ "github.com/jinzhu/gorm/dialects/postgres" // using postgres sql
@@ -31,11 +32,15 @@ const defaultPort = "8080"
 // TODO: move to conf package
 type ckey string
 
+var db *gorm.DB
+
 func New() generated.Config {
 	return generated.Config{
 		Resolvers: &graph.Resolver{
 			// Rooms:         map[string]*Chatroom{},
 			AdminChans: map[string]*chans.CoreAdminChannel{},
+			Coredb:     setup.SetupModels(),
+			// db,
 		},
 		Directives: generated.DirectiveRoot{
 			User: func(ctx context.Context, obj interface{}, next graphql.Resolver, username string) (res interface{}, err error) {
@@ -74,6 +79,10 @@ func main() {
 	mux.Use(middlewares.JwtMiddleware())
 
 	mux.Handle("/", playground.Handler("GraphQL playground", "/query"))
+
+	// handler.GraphQL(go_orders_graphql_api.NewExecutableSchema(go_orders_graphql_api.Config{Resolvers: &go_orders_graphql_api.Resolver{
+	//     DB: db,
+	// }})))
 	mux.Handle("/query", c.Handler(srv))
 	// fs := http.FileServer(http.Dir("./static"))
 	// TODO: move hardcoded staic path to path finder variable
@@ -81,7 +90,6 @@ func main() {
 	mux.Handle("/static/", http.StripPrefix("/static/", neuter(fileServer)))
 	// http.Handle("/", fileServer)
 
-	setup.SetupModels()
 	log.Printf("connect to http://0.0.0.0:%s/ for GraphQL playground", defaultPort)
 	log.Fatal(http.ListenAndServe(":"+defaultPort, mux))
 }

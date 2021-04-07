@@ -7,9 +7,15 @@ type AuthResult struct {
 	Status bool   `json:"status"`
 }
 
+type DeviceDataInput struct {
+	AppID      string `json:"appId"`
+	DeviceName string `json:"deviceName"`
+}
+
 type NewUsrInput struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Email       string           `json:"email"`
+	Password    string           `json:"password"`
+	DeviceInput *DeviceDataInput `json:"deviceInput"`
 }
 
 type ProfileStarterInput struct {

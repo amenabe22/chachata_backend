@@ -4,12 +4,12 @@ import (
 	"crypto/sha1"
 
 	"github.com/amenabe22/chachata_backend/graph/model"
-	"github.com/amenabe22/chachata_backend/graph/setup"
 	p "github.com/wuriyanto48/go-pbkdf2"
+	"gorm.io/gorm"
 )
 
 func Authenticate(password string, email string) (*model.User, bool) {
-	db := setup.SetupModels()
+	db := gorm.DB{}
 	usrs := []*model.User{}
 	db.First(&usrs, "email = ?", email)
 	if len(usrs) == 1 {

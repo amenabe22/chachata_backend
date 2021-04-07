@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"github.com/amenabe22/chachata_backend/graph/chans"
+	"gorm.io/gorm"
 )
 
 // This file will not be regenerated automatically.
@@ -13,4 +14,5 @@ import (
 type Resolver struct {
 	mu         sync.Mutex
 	AdminChans map[string]*chans.CoreAdminChannel
+	Coredb     *gorm.DB
 }
