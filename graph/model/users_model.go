@@ -19,6 +19,8 @@ type User struct {
 	Qrcode     string
 	// UserDevices []Devices `gorm:"many2many:devices;" json:"devices,omitempty"`
 	UserDevices []Devices `gorm:"polymorphic:Owner"`
+	OwnerID     string
+	OwnerType   string
 }
 
 // Profile is the model for the profile table.
