@@ -72,6 +72,15 @@ func SetupModels() *gorm.DB {
 		&model.Events{},
 		&model.EventPromotionPic{},
 		&model.UserCircle{},
+		&model.BookingOrder{},
+		&model.BookingOrderDraft{},
+		&model.MenuOrder{},
+		&model.MenuOrderDraft{},
+		&model.ProductPurchaseOrder{},
+		&model.ProductPurchaseOrderDraft{},
+		&model.EventTicketPurchaseOrder{},
+		// Travel logic models
+		&model.UserTravel{},
 	)
 	// db.Migrator().CreateConstraint(&model.Profile{}, "fk_users_devices")
 	// db.Migrator().CreateConstraint(&model.Devices{}), "Profiles")

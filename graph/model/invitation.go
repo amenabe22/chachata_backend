@@ -16,4 +16,6 @@ type Invitation struct {
 	DeletedAt        *time.Time `sql:"index"`
 	CircleInvitation bool
 	Circle           []UserCircle `gorm:"polymorphic:Owner"`
+	UserId           string       `gorm:"UNIQUE_INDEX:compositeindex;index;null"`
+	User             User         `gorm:"UNIQUE_INDEX:compositeindex;type:text;null"`
 }
