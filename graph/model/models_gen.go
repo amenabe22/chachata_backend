@@ -22,7 +22,6 @@ type ProfileStarterInput struct {
 	Username string `json:"username"`
 	Name     string `json:"name"`
 	Phone    string `json:"phone"`
-	UID      string `json:"uid"`
 }
 
 type ProfileUpdateResult struct {

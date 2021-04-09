@@ -61,7 +61,7 @@ type ComplexityRoot struct {
 		EmailAuthLogin       func(childComplexity int, email string, password string) int
 		NewUsr               func(childComplexity int, input model.NewUsrInput) int
 		RemoveAllUsrs        func(childComplexity int) int
-		UpdateProfileStarter func(childComplexity int, uid model.ProfileStarterInput) int
+		UpdateProfileStarter func(childComplexity int, input model.ProfileStarterInput) int
 	}
 
 	Profile struct {
@@ -103,7 +103,7 @@ type MutationResolver interface {
 	RemoveAllUsrs(ctx context.Context) (bool, error)
 	NewUsr(ctx context.Context, input model.NewUsrInput) (string, error)
 	EmailAuthLogin(ctx context.Context, email string, password string) (*model.AuthResult, error)
-	UpdateProfileStarter(ctx context.Context, uid model.ProfileStarterInput) (*model.ProfileUpdateResult, error)
+	UpdateProfileStarter(ctx context.Context, input model.ProfileStarterInput) (*model.ProfileUpdateResult, error)
 }
 type QueryResolver interface {
 	AllUsrs(ctx context.Context) ([]*model.User, error)
@@ -205,7 +205,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.UpdateProfileStarter(childComplexity, args["uid"].(model.ProfileStarterInput)), true
+		return e.complexity.Mutation.UpdateProfileStarter(childComplexity, args["input"].(model.ProfileStarterInput)), true
 
 	case "Profile.complete":
 		if e.complexity.Profile.Complete == nil {
@@ -465,7 +465,6 @@ input ProfileStarterInput {
   username: String!
   name: String!
   phone: String!
-  uid: String!
 }
 
 input DeviceDataInput {
@@ -496,7 +495,7 @@ type Mutation {
   removeAllUsrs: Boolean!
   newUsr(input: NewUsrInput!): String!
   emailAuthLogin(email: String!, password: String!): AuthResult!
-  updateProfileStarter(uid: ProfileStarterInput!): ProfileUpdateResult!
+  updateProfileStarter(input: ProfileStarterInput!): ProfileUpdateResult!
 }
 
 directive @user(username: String!) on SUBSCRIPTION
@@ -566,14 +565,14 @@ func (ec *executionContext) field_Mutation_updateProfileStarter_args(ctx context
 	var err error
 	args := map[string]interface{}{}
 	var arg0 model.ProfileStarterInput
-	if tmp, ok := rawArgs["uid"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("uid"))
+	if tmp, ok := rawArgs["input"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
 		arg0, err = ec.unmarshalNProfileStarterInput2githubᚗcomᚋamenabe22ᚋchachata_backendᚋgraphᚋmodelᚐProfileStarterInput(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["uid"] = arg0
+	args["input"] = arg0
 	return args, nil
 }
 
@@ -1001,7 +1000,7 @@ func (ec *executionContext) _Mutation_updateProfileStarter(ctx context.Context, 
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().UpdateProfileStarter(rctx, args["uid"].(model.ProfileStarterInput))
+		return ec.resolvers.Mutation().UpdateProfileStarter(rctx, args["input"].(model.ProfileStarterInput))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2946,14 +2945,6 @@ func (ec *executionContext) unmarshalInputProfileStarterInput(ctx context.Contex
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("phone"))
 			it.Phone, err = ec.unmarshalNString2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "uid":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("uid"))
-			it.UID, err = ec.unmarshalNString2string(ctx, v)
 			if err != nil {
 				return it, err
 			}

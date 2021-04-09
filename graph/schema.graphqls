@@ -35,7 +35,6 @@ input ProfileStarterInput {
   username: String!
   name: String!
   phone: String!
-  uid: String!
 }
 
 input DeviceDataInput {
@@ -66,7 +65,7 @@ type Mutation {
   removeAllUsrs: Boolean!
   newUsr(input: NewUsrInput!): String!
   emailAuthLogin(email: String!, password: String!): AuthResult!
-  updateProfileStarter(uid: ProfileStarterInput!): ProfileUpdateResult!
+  updateProfileStarter(input: ProfileStarterInput!): ProfileUpdateResult!
 }
 
 directive @user(username: String!) on SUBSCRIPTION

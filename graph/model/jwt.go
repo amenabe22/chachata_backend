@@ -1,4 +1,4 @@
-package middlewares
+package model
 
 import (
 	"context"
@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/amenabe22/chachata_backend/graph/model"
 	"github.com/dgrijalva/jwt-go"
 	"gorm.io/gorm"
 )
@@ -118,12 +117,12 @@ func GenerateJwt(userID string, expiredAt int64) string {
 	return signedToken
 }
 
-func GetAuthStat(coredb *gorm.DB, ctx context.Context, errorMessage string) (bool, model.User, error) {
+func GetAuthStat(coredb *gorm.DB, ctx context.Context, errorMessage string) (bool, User, error) {
 	userAuth := GetAuthFromContext(ctx)
 	if userAuth.UserID == "err" {
-		return false, model.User{}, errors.New(errorMessage)
+		return false, User{}, errors.New(errorMessage)
 	}
-	user := model.User{}
+	user := User{}
 	coredb.First(&user, "id = ?", userAuth.UserID)
 
 	return true, user, nil

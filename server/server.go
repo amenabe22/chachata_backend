@@ -16,8 +16,8 @@ import (
 	"github.com/amenabe22/chachata_backend/graph"
 	"github.com/amenabe22/chachata_backend/graph/chans"
 	"github.com/amenabe22/chachata_backend/graph/generated"
+	"github.com/amenabe22/chachata_backend/graph/model"
 	"github.com/amenabe22/chachata_backend/graph/setup"
-	"github.com/amenabe22/chachata_backend/middlewares"
 	"github.com/go-chi/chi"
 	"github.com/gorilla/websocket"
 	"github.com/rs/cors"
@@ -76,7 +76,7 @@ func main() {
 	srv.Use(extension.Introspection{})
 	// mux.Use(authWare.MiddlewareFunc())
 	// mux.Use(authWare.MiddlewareFunc())
-	mux.Use(middlewares.JwtMiddleware())
+	mux.Use(model.JwtMiddleware())
 
 	mux.Handle("/", playground.Handler("GraphQL playground", "/query"))
 
