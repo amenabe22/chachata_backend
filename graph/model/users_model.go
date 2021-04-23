@@ -184,3 +184,13 @@ func EmailAuthLogin(email string, password string, coredb *gorm.DB) (*AuthResult
 		Status: true,
 	}, nil
 }
+
+func forgotPassword(email string, coredb *gorm.DB) (bool, error) {
+	usrs := []*User{}
+	coredb.First(&usrs, "email = ?", email)
+	if len(usrs) == 0 {
+		return false, errors.New("Email is unknown")
+	}
+	// send email to user to change password and stuff
+	return false, nil
+}

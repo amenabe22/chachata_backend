@@ -1,4 +1,17 @@
 scalar UUID
+scalar Time
+
+type Message {
+    id: ID!
+    text: String!
+    createdBy: String!
+    createdAt: Time!
+}
+
+type Chatroom {
+    name: String!
+    messages: [Message!]!
+}
 
 type Devices {
   id: UUID!
@@ -44,6 +57,7 @@ input DeviceDataInput {
 
 type Subscription {
   adminsNotified: String
+  messageAdded(roomName: String!): Message!
 }
 
 type AuthResult {
@@ -54,7 +68,9 @@ type AuthResult {
 type Query{
   allUsrs: [User!]!
   secureInfo: String!
-  userData(id: String!): User!
+  userData: User!
+  room(name:String!): Chatroom
+  allRooms: [Chatroom!]!
 }
 type ProfileUpdateResult {
   message: String!
@@ -66,6 +82,10 @@ type Mutation {
   newUsr(input: NewUsrInput!): String!
   emailAuthLogin(email: String!, password: String!): AuthResult!
   updateProfileStarter(input: ProfileStarterInput!): ProfileUpdateResult!
+  forgotPassword: Boolean!
+  # chatroom schemas
+  post(text: String!, username: String!, roomName: String!): Message!
+  popAllChats: Boolean!
 }
 
 directive @user(username: String!) on SUBSCRIPTION

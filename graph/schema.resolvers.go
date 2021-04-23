@@ -5,8 +5,10 @@ package graph
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/amenabe22/chachata_backend/graph/chans"
@@ -72,6 +74,65 @@ func (r *mutationResolver) UpdateProfileStarter(ctx context.Context, input model
 	return nil, nil
 }
 
+func (r *mutationResolver) ForgotPassword(ctx context.Context) (bool, error) {
+	panic(fmt.Errorf("not implemented"))
+}
+
+func (r *mutationResolver) Post(ctx context.Context, text string, username string, roomName string) (*model.Message, error) {
+	r.mu.Lock()
+	room := r.Rooms[roomName]
+	if room == nil {
+		room = &model.Chatroom{
+			Name: roomName,
+			Observers: map[string]struct {
+				Username string
+				Message  chan *model.Message
+			}{},
+		}
+		r.Rooms[roomName] = room
+		// var rm model.Chatroom
+		// json.Unmarshal([]byte(rj), &rm)
+		// // unmarshal the json object
+		// println(rm.Name, "FO REAL")
+	}
+	r.mu.Unlock()
+	var value helpers.Export
+
+	message := model.Message{
+		ID:        value.RandString(8),
+		CreatedAt: time.Now(),
+		Text:      text,
+		CreatedBy: username,
+	}
+
+	room.Messages = append(room.Messages, message)
+	// this marhalled data is being non unique every time unless it's repeated
+	rj, _ := json.Marshal(room)
+	// using sadd to make sure there's no duplicate
+	// use foreign key relation to make sure things are stable
+	if err := r.RedisClient.SAdd("rooms", rj).Err(); err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	r.mu.Lock()
+	for _, observer := range room.Observers {
+		if observer.Username == "" || observer.Username == message.CreatedBy {
+			observer.Message <- &message
+		}
+	}
+	r.mu.Unlock()
+	return &message, nil
+}
+
+func (r *mutationResolver) PopAllChats(ctx context.Context) (bool, error) {
+	// rms := model.Chatroom{}
+	if err := r.RedisClient.Del("rooms").Err(); err != nil {
+		log.Println(err)
+		return false, err
+	}
+	return true, nil
+}
+
 func (r *queryResolver) AllUsrs(ctx context.Context) ([]*model.User, error) {
 	users, err := model.AllUsrs(r.Coredb)
 	if err != nil {
@@ -93,8 +154,52 @@ func (r *queryResolver) SecureInfo(ctx context.Context) (string, error) {
 	return "Hey there", nil
 }
 
-func (r *queryResolver) UserData(ctx context.Context, id string) (*model.User, error) {
-	panic(fmt.Errorf("not implemented"))
+func (r *queryResolver) UserData(ctx context.Context) (*model.User, error) {
+	tokenStat, user, err := model.GetAuthStat(r.Coredb, ctx, "Invalid token")
+	if err != nil {
+		return nil, err
+	}
+	if tokenStat {
+		return &user, nil
+	}
+	return nil, nil
+}
+
+func (r *queryResolver) Room(ctx context.Context, name string) (*model.Chatroom, error) {
+	r.mu.Lock()
+	room := r.Rooms[name]
+	if room == nil {
+		room = &model.Chatroom{
+			Name: name,
+			Observers: map[string]struct {
+				Username string
+				Message  chan *model.Message
+			}{},
+		}
+		r.Rooms[name] = room
+	}
+	r.mu.Unlock()
+	return room, nil
+}
+
+func (r *queryResolver) AllRooms(ctx context.Context) ([]*model.Chatroom, error) {
+	cmd := r.RedisClient.SMembers("rooms")
+	if cmd.Err() != nil {
+		log.Println(cmd.Err(), "CMD ERR")
+		return nil, cmd.Err()
+	}
+	res, err := cmd.Result()
+	if err != nil {
+		log.Println(err, "ERROR WITH RESULT")
+		return nil, err
+	}
+	chatRooms := []*model.Chatroom{}
+	for _, cr := range res {
+		var rm model.Chatroom
+		json.Unmarshal([]byte(cr), &rm)
+		chatRooms = append(chatRooms, &rm)
+	}
+	return chatRooms, nil
 }
 
 func (r *subscriptionResolver) AdminsNotified(ctx context.Context) (<-chan *string, error) {
@@ -129,6 +234,41 @@ func (r *subscriptionResolver) AdminsNotified(ctx context.Context) (<-chan *stri
 		Username string
 		Message  chan *string
 	}{Username: "hey", Message: events}
+	r.mu.Unlock()
+	return events, nil
+}
+
+func (r *subscriptionResolver) MessageAdded(ctx context.Context, roomName string) (<-chan *model.Message, error) {
+	r.mu.Lock()
+	room := r.Rooms[roomName]
+	if room == nil {
+		room = &model.Chatroom{
+			Name: roomName,
+			Observers: map[string]struct {
+				Username string
+				Message  chan *model.Message
+			}{},
+		}
+		r.Rooms[roomName] = room
+	}
+	r.mu.Unlock()
+	var value helpers.Export
+	id := value.RandString(8)
+	events := make(chan *model.Message, 1)
+	go func() {
+		<-ctx.Done()
+		r.mu.Lock()
+		delete(room.Observers, id)
+		r.mu.Unlock()
+	}()
+	r.mu.Lock()
+	room.Observers[id] = struct {
+		Username string
+		Message  chan *model.Message
+	}{
+		Username: value.GetUsername(ctx),
+		Message:  events,
+	}
 	r.mu.Unlock()
 	return events, nil
 }

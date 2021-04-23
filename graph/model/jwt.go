@@ -12,6 +12,7 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // UserAuth - user auth middleware structure
@@ -123,7 +124,7 @@ func GetAuthStat(coredb *gorm.DB, ctx context.Context, errorMessage string) (boo
 		return false, User{}, errors.New(errorMessage)
 	}
 	user := User{}
-	coredb.First(&user, "id = ?", userAuth.UserID)
-
+	// preload everything with this
+	coredb.Preload(clause.Associations).First(&user, "id = ?", userAuth.UserID)
 	return true, user, nil
 }

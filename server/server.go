@@ -19,8 +19,11 @@ import (
 	"github.com/amenabe22/chachata_backend/graph/model"
 	"github.com/amenabe22/chachata_backend/graph/setup"
 	"github.com/go-chi/chi"
+	"github.com/go-redis/redis"
 	"github.com/gorilla/websocket"
 	"github.com/rs/cors"
+
+	// "github.com/tinrab/retry"
 	"gorm.io/gorm"
 
 	"github.com/go-chi/jwtauth/v5"
@@ -35,11 +38,19 @@ type ckey string
 var db *gorm.DB
 
 func New() generated.Config {
+	client := redis.NewClient(&redis.Options{
+		Addr: "localhost:6379",
+	})
+	// retry.ForeverSleep(2*time.Second, func(_ int) error {
+	// 	_, err := client.Ping().Result()
+	// 	return err
+	// })
 	return generated.Config{
 		Resolvers: &graph.Resolver{
-			// Rooms:         map[string]*Chatroom{},
-			AdminChans: map[string]*chans.CoreAdminChannel{},
-			Coredb:     setup.SetupModels(),
+			RedisClient: client,
+			Rooms:       map[string]*model.Chatroom{},
+			AdminChans:  map[string]*chans.CoreAdminChannel{},
+			Coredb:      setup.SetupModels(),
 			// db,
 		},
 		Directives: generated.DirectiveRoot{
