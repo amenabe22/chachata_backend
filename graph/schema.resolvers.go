@@ -138,6 +138,7 @@ func (r *mutationResolver) Post(ctx context.Context, text string, username strin
 		// // unmarshal the json object
 		// println(rm.Name, "FO REAL")
 	} else {
+		// make sure to keep the room ID
 		room.ID = roomId
 	}
 	println("HOW ABOUT NOW", newRoom, room == nil)
