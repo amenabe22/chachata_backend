@@ -10,10 +10,17 @@ type Message struct {
 }
 
 type Chatroom struct {
+	ID        string `json:"id"`
 	Name      string
 	Messages  []Message
 	Observers map[string]struct {
 		Username string
 		Message  chan *Message
 	}
+}
+
+type InstantMessage struct {
+	ID      string `json:"id"`
+	Name    string
+	Message Message
 }

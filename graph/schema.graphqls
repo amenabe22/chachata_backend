@@ -7,10 +7,16 @@ type Message {
     createdBy: String!
     createdAt: Time!
 }
-
 type Chatroom {
+    id: ID!
     name: String!
     messages: [Message!]!
+}
+
+type InstatntMessage {
+    id: ID!
+    name: String!
+    message: Message!
 }
 
 type Devices {
@@ -70,7 +76,9 @@ type Query{
   secureInfo: String!
   userData: User!
   room(name:String!): Chatroom
-  allRooms: [Chatroom!]!
+  allRooms: [InstatntMessage!]!
+  allMessages: [Chatroom!]!
+  singleRoomMessages(room: String!): [Message!]!
 }
 type ProfileUpdateResult {
   message: String!

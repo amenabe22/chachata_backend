@@ -15,6 +15,7 @@ import (
 	"github.com/amenabe22/chachata_backend/graph/generated"
 	"github.com/amenabe22/chachata_backend/graph/helpers"
 	"github.com/amenabe22/chachata_backend/graph/model"
+	"github.com/dgryski/trifles/uuid"
 )
 
 func (r *mutationResolver) RemoveAllUsrs(ctx context.Context) (bool, error) {
@@ -80,21 +81,67 @@ func (r *mutationResolver) ForgotPassword(ctx context.Context) (bool, error) {
 
 func (r *mutationResolver) Post(ctx context.Context, text string, username string, roomName string) (*model.Message, error) {
 	r.mu.Lock()
+	// fetch rooms from redis and check if they are not duplicate
+	cmd := r.RedisClient.SMembers("rooms")
+	if cmd.Err() != nil {
+		log.Println(cmd.Err(), "CMD ERR")
+		return nil, cmd.Err()
+	}
+	res, err := cmd.Result()
+	if err != nil {
+		log.Println(err, "ERROR WITH RESULT")
+		return nil, err
+	}
+	roomId := ""
+	newRoom := true
+	// //////////////////////////////////////
+	for _, cr := range res {
+		var finRoom model.InstatntMessage
+		json.Unmarshal([]byte(cr), &finRoom)
+		// finRooms = append(finRooms, &finRoom)
+		println(finRoom.ID, "HERE AGAIN")
+		if finRoom.Name == roomName {
+			newRoom = false
+			roomId = finRoom.ID
+			println("ROOM IS NOT NEW", finRoom.ID)
+		}
+	}
+	println("NEW ROOM ", newRoom, roomId)
+
 	room := r.Rooms[roomName]
-	if room == nil {
-		room = &model.Chatroom{
-			Name: roomName,
-			Observers: map[string]struct {
-				Username string
-				Message  chan *model.Message
-			}{},
+	// the below uses the above logic after the room is checked for duplicate
+	if newRoom || room == nil {
+		println("NEW ONE", roomId)
+		if roomId == "" {
+
+			room = &model.Chatroom{
+				ID:   uuid.UUIDv4(),
+				Name: roomName,
+				Observers: map[string]struct {
+					Username string
+					Message  chan *model.Message
+				}{},
+			}
+		} else {
+			room = &model.Chatroom{
+				ID:   roomId,
+				Name: roomName,
+				Observers: map[string]struct {
+					Username string
+					Message  chan *model.Message
+				}{},
+			}
 		}
 		r.Rooms[roomName] = room
 		// var rm model.Chatroom
 		// json.Unmarshal([]byte(rj), &rm)
 		// // unmarshal the json object
 		// println(rm.Name, "FO REAL")
+	} else {
+		room.ID = roomId
 	}
+	println("HOW ABOUT NOW", newRoom, room == nil)
+	// println(room.ID, room.Name, "SSSS")
 	r.mu.Unlock()
 	var value helpers.Export
 
@@ -104,16 +151,23 @@ func (r *mutationResolver) Post(ctx context.Context, text string, username strin
 		Text:      text,
 		CreatedBy: username,
 	}
-
+	println("Look down")
+	println(room.ID, "SSSSSss")
+	instantMess := &model.InstantMessage{
+		ID:      room.ID,
+		Name:    room.Name,
+		Message: message,
+	}
 	room.Messages = append(room.Messages, message)
 	// this marhalled data is being non unique every time unless it's repeated
-	rj, _ := json.Marshal(room)
+	rj, _ := json.Marshal(instantMess)
 	// using sadd to make sure there's no duplicate
 	// use foreign key relation to make sure things are stable
 	if err := r.RedisClient.SAdd("rooms", rj).Err(); err != nil {
 		log.Println(err)
 		return nil, err
 	}
+
 	r.mu.Lock()
 	for _, observer := range room.Observers {
 		if observer.Username == "" || observer.Username == message.CreatedBy {
@@ -182,8 +236,30 @@ func (r *queryResolver) Room(ctx context.Context, name string) (*model.Chatroom,
 	return room, nil
 }
 
-func (r *queryResolver) AllRooms(ctx context.Context) ([]*model.Chatroom, error) {
+func (r *queryResolver) AllRooms(ctx context.Context) ([]*model.InstatntMessage, error) {
 	cmd := r.RedisClient.SMembers("rooms")
+	if cmd.Err() != nil {
+		log.Println(cmd.Err(), "CMD ERR")
+		return nil, cmd.Err()
+	}
+	res, err := cmd.Result()
+	if err != nil {
+		log.Println(err, "ERROR WITH RESULT")
+		return nil, err
+	}
+	chatRooms := []*model.InstatntMessage{}
+	for _, cr := range res {
+		// var rm model.Chatroom
+		var finRoom model.InstatntMessage
+		// json.Unmarshal([]byte(cr), &rm)
+		json.Unmarshal([]byte(cr), &finRoom)
+		chatRooms = append(chatRooms, &finRoom)
+	}
+	return chatRooms, nil
+}
+
+func (r *queryResolver) AllMessages(ctx context.Context) ([]*model.Chatroom, error) {
+	cmd := r.RedisClient.SMembers("messages")
 	if cmd.Err() != nil {
 		log.Println(cmd.Err(), "CMD ERR")
 		return nil, cmd.Err()
@@ -195,11 +271,39 @@ func (r *queryResolver) AllRooms(ctx context.Context) ([]*model.Chatroom, error)
 	}
 	chatRooms := []*model.Chatroom{}
 	for _, cr := range res {
-		var rm model.Chatroom
-		json.Unmarshal([]byte(cr), &rm)
-		chatRooms = append(chatRooms, &rm)
+		// var rm model.Chatroom
+		var finRoom model.Chatroom
+		// json.Unmarshal([]byte(cr), &rm)
+		json.Unmarshal([]byte(cr), &finRoom)
+		chatRooms = append(chatRooms, &finRoom)
 	}
 	return chatRooms, nil
+}
+
+func (r *queryResolver) SingleRoomMessages(ctx context.Context, room string) ([]*model.Message, error) {
+	cmd := r.RedisClient.SMembers("rooms")
+	if cmd.Err() != nil {
+		log.Println(cmd.Err(), "CMD ERR")
+		return nil, cmd.Err()
+	}
+	res, err := cmd.Result()
+	if err != nil {
+		log.Println(err, "ERROR WITH RESULT")
+		return nil, err
+	}
+
+	allMes := []*model.Message{}
+	for _, cr := range res {
+		var finRoom model.InstantMessage
+		json.Unmarshal([]byte(cr), &finRoom)
+		// check if the room id matches any from the database
+		if finRoom.ID == room {
+			// nested loop makes it slower
+			allMes = append(allMes, &finRoom.Message)
+		}
+	}
+
+	return allMes, nil
 }
 
 func (r *subscriptionResolver) AdminsNotified(ctx context.Context) (<-chan *string, error) {

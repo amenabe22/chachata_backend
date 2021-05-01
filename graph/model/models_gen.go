@@ -12,6 +12,12 @@ type DeviceDataInput struct {
 	DeviceName string `json:"deviceName"`
 }
 
+type InstatntMessage struct {
+	ID      string   `json:"id"`
+	Name    string   `json:"name"`
+	Message *Message `json:"message"`
+}
+
 type NewUsrInput struct {
 	Email       string           `json:"email"`
 	Password    string           `json:"password"`
