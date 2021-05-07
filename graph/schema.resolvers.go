@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"sort"
 	"time"
 
 	"github.com/amenabe22/chachata_backend/graph/chans"
@@ -92,55 +93,55 @@ func (r *mutationResolver) Post(ctx context.Context, text string, username strin
 		log.Println(err, "ERROR WITH RESULT")
 		return nil, err
 	}
-	roomId := ""
+	// roomId := ""
 	newRoom := true
-	// //////////////////////////////////////
 	for _, cr := range res {
 		var finRoom model.InstatntMessage
 		json.Unmarshal([]byte(cr), &finRoom)
 		// finRooms = append(finRooms, &finRoom)
-		println(finRoom.ID, "HERE AGAIN")
+		// println(finRoom.ID, "HERE AGAIN")
 		if finRoom.Name == roomName {
 			newRoom = false
-			roomId = finRoom.ID
-			println("ROOM IS NOT NEW", finRoom.ID)
+			// roomId = finRoom.ID
+			// println("ROOM IS NOT NEW", finRoom.ID)
 		}
 	}
-	println("NEW ROOM ", newRoom, roomId)
 
 	room := r.Rooms[roomName]
+	println(roomName, room.Name, room.ID, "GO GO GOGO")
 	// the below uses the above logic after the room is checked for duplicate
-	if newRoom || room == nil {
-		println("NEW ONE", roomId)
-		if roomId == "" {
+	// if newRoom || room == nil {
+	// 	println("NEW ONE", roomId)
+	// 	if roomId == "" {
 
-			room = &model.Chatroom{
-				ID:   uuid.UUIDv4(),
-				Name: roomName,
-				Observers: map[string]struct {
-					Username string
-					Message  chan *model.Message
-				}{},
-			}
-		} else {
-			room = &model.Chatroom{
-				ID:   roomId,
-				Name: roomName,
-				Observers: map[string]struct {
-					Username string
-					Message  chan *model.Message
-				}{},
-			}
-		}
-		r.Rooms[roomName] = room
-		// var rm model.Chatroom
-		// json.Unmarshal([]byte(rj), &rm)
-		// // unmarshal the json object
-		// println(rm.Name, "FO REAL")
-	} else {
-		// make sure to keep the room ID
-		room.ID = roomId
-	}
+	// 		room = &model.Chatroom{
+	// 			ID:   uuid.UUIDv4(),
+	// 			Name: roomName,
+	// 			Observers: map[string]struct {
+	// 				Username string
+	// 				Message  chan *model.Message
+	// 			}{},
+	// 		}
+	// 	} else {
+	// 		room = &model.Chatroom{
+	// 			ID:   roomId,
+	// 			Name: roomName,
+	// 			Observers: map[string]struct {
+	// 				Username string
+	// 				Message  chan *model.Message
+	// 			}{},
+	// 		}
+	// 	}
+	// 	r.Rooms[roomName] = room
+	// 	// var rm model.Chatroom
+	// 	// json.Unmarshal([]byte(rj), &rm)
+	// 	// // unmarshal the json object
+	// 	// println(rm.Name, "FO REAL")
+	// }
+	// else {
+	// 	// make sure to keep the room ID
+	// 	room.ID = roomId
+	// }
 	println("HOW ABOUT NOW", newRoom, room == nil)
 	// println(room.ID, room.Name, "SSSS")
 	r.mu.Unlock()
@@ -171,9 +172,11 @@ func (r *mutationResolver) Post(ctx context.Context, text string, username strin
 
 	r.mu.Lock()
 	for _, observer := range room.Observers {
-		if observer.Username == "" || observer.Username == message.CreatedBy {
-			observer.Message <- &message
-		}
+		println(observer.Username, "OBSERVER")
+		println(message.CreatedBy, "CREATOR")
+		// if observer.Username == "" || observer.Username == message.CreatedBy {
+		observer.Message <- &message
+		// }
 	}
 	r.mu.Unlock()
 	return &message, nil
@@ -181,11 +184,38 @@ func (r *mutationResolver) Post(ctx context.Context, text string, username strin
 
 func (r *mutationResolver) PopAllChats(ctx context.Context) (bool, error) {
 	// rms := model.Chatroom{}
+	if err := r.RedisClient.Del("all_rooms").Err(); err != nil {
+		log.Println(err)
+		return false, err
+	}
 	if err := r.RedisClient.Del("rooms").Err(); err != nil {
 		log.Println(err)
 		return false, err
 	}
 	return true, nil
+}
+
+func (r *mutationResolver) NewRoom(ctx context.Context, roomName string) (*model.Chatroom, error) {
+	r.mu.Lock()
+	room := &model.Chatroom{
+		ID:   uuid.UUIDv4(),
+		Name: roomName,
+		Observers: map[string]struct {
+			Username string
+			Message  chan *model.Message
+		}{},
+	}
+	r.Rooms[roomName] = room
+	// save the room inside a new set now
+	rj, _ := json.Marshal(room)
+
+	if err := r.RedisClient.SAdd("all_rooms", rj).Err(); err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	r.mu.Unlock()
+	// end here
+	return room, nil
 }
 
 func (r *queryResolver) AllUsrs(ctx context.Context) ([]*model.User, error) {
@@ -235,6 +265,28 @@ func (r *queryResolver) Room(ctx context.Context, name string) (*model.Chatroom,
 	}
 	r.mu.Unlock()
 	return room, nil
+}
+
+func (r *queryResolver) AllRoomsList(ctx context.Context) ([]*model.Chatroom, error) {
+	cmd := r.RedisClient.SMembers("all_rooms")
+	if cmd.Err() != nil {
+		log.Println(cmd.Err(), "CMD ERR")
+		return nil, cmd.Err()
+	}
+	res, err := cmd.Result()
+	if err != nil {
+		log.Println(err, "ERROR WITH RESULT")
+		return nil, err
+	}
+	chatRooms := []*model.Chatroom{}
+	for _, cr := range res {
+		// var rm model.Chatroom
+		var finRoom model.Chatroom
+		// json.Unmarshal([]byte(cr), &rm)
+		json.Unmarshal([]byte(cr), &finRoom)
+		chatRooms = append(chatRooms, &finRoom)
+	}
+	return chatRooms, nil
 }
 
 func (r *queryResolver) AllRooms(ctx context.Context) ([]*model.InstatntMessage, error) {
@@ -298,12 +350,17 @@ func (r *queryResolver) SingleRoomMessages(ctx context.Context, room string) ([]
 		var finRoom model.InstantMessage
 		json.Unmarshal([]byte(cr), &finRoom)
 		// check if the room id matches any from the database
+		println(finRoom.Message.Text, "....................", room, finRoom.ID)
 		if finRoom.ID == room {
+			println("ROOM MESSAGES ARE HERE")
 			// nested loop makes it slower
 			allMes = append(allMes, &finRoom.Message)
 		}
 	}
-
+	// Fixed with sort
+	sort.Slice(allMes, func(i, j int) bool {
+		return allMes[i].CreatedAt.Before(allMes[j].CreatedAt)
+	})
 	return allMes, nil
 }
 
@@ -343,20 +400,85 @@ func (r *subscriptionResolver) AdminsNotified(ctx context.Context) (<-chan *stri
 	return events, nil
 }
 
-func (r *subscriptionResolver) MessageAdded(ctx context.Context, roomName string) (<-chan *model.Message, error) {
+func (r *subscriptionResolver) UsersNotification(ctx context.Context) (<-chan *model.Notifications, error) {
+	roomId := "admins"
 	r.mu.Lock()
-	room := r.Rooms[roomName]
+	room := r.AdminChans[roomId]
 	if room == nil {
-		room = &model.Chatroom{
-			Name: roomName,
+		room = &chans.CoreAdminChannel{
+			RoomId: roomId,
 			Observers: map[string]struct {
 				Username string
-				Message  chan *model.Message
+				Message  chan *string
 			}{},
 		}
-		r.Rooms[roomName] = room
+		r.AdminChans[roomId] = room
 	}
+	var value helpers.Export
 	r.mu.Unlock()
+
+	id := value.RandString(8)
+	events := make(chan *model.Notifications, 1)
+
+	go func() {
+		<-ctx.Done()
+		r.mu.Lock()
+		delete(room.Observers, id)
+		r.mu.Unlock()
+	}()
+
+	r.mu.Lock()
+	r.mu.Unlock()
+	return events, nil
+
+}
+func (r *subscriptionResolver) MessageAdded(ctx context.Context, roomName string, username string) (<-chan *model.Message, error) {
+	// r.mu.Lock()
+	room := r.Rooms[roomName]
+	var finalRoom model.Chatroom
+	isRoominDb := false
+	// var finalRoom model.Chatroom
+	// fmt.Println(room == nil, "NO ROOM")
+	if room == nil {
+		// if room in state is empty then get rooms from redis database
+		cmd := r.RedisClient.SMembers("all_rooms")
+		if cmd.Err() != nil {
+			log.Println(cmd.Err(), "CMD ERR")
+			return nil, cmd.Err()
+		}
+		res, err := cmd.Result()
+		if err != nil {
+			log.Println(err, "ERROR WITH RESULT")
+			return nil, err
+		}
+		for _, cr := range res {
+			var finRoom model.Chatroom
+			// json.Unmarshal([]byte(cr), &rm)
+			json.Unmarshal([]byte(cr), &finRoom)
+			if finRoom.Name == roomName {
+				isRoominDb = true
+				finalRoom = finRoom
+				// println("got room from db", room.Name, room.ID)
+			}
+		}
+		// chcek if the outer final room is available
+		room = &finalRoom
+		r.Rooms[finalRoom.Name] = &finalRoom
+
+		// if room is null create a new one
+		if !isRoominDb {
+			return nil, errors.New("Room not found")
+		}
+		// room = &model.Chatroom{
+		// 	Name: roomName,
+		// 	Observers: map[string]struct {
+		// 		Username string
+		// 		Message  chan *model.Message
+		// 	}{},
+		// }
+		// r.Rooms[roomName] = room
+	}
+	// r.mu.Unlock()
 	var value helpers.Export
 	id := value.RandString(8)
 	events := make(chan *model.Message, 1)
@@ -367,13 +489,15 @@ func (r *subscriptionResolver) MessageAdded(ctx context.Context, roomName string
 		r.mu.Unlock()
 	}()
 	r.mu.Lock()
+	// add a new observer
 	room.Observers[id] = struct {
 		Username string
 		Message  chan *model.Message
 	}{
-		Username: value.GetUsername(ctx),
+		Username: username,
 		Message:  events,
 	}
+	println(len(room.Observers), "OBSRVERS COUNT")
 	r.mu.Unlock()
 	return events, nil
 }

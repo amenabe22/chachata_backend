@@ -1,6 +1,13 @@
 scalar UUID
 scalar Time
 
+type Notifications {
+    id: ID!
+    type: String!
+    text: String!
+
+}
+
 type Message {
     id: ID!
     text: String!
@@ -63,7 +70,8 @@ input DeviceDataInput {
 
 type Subscription {
   adminsNotified: String
-  messageAdded(roomName: String!): Message!
+  messageAdded(roomName: String!, username: String!): Message!
+  usersNotification: Notifications!
 }
 
 type AuthResult {
@@ -76,6 +84,7 @@ type Query{
   secureInfo: String!
   userData: User!
   room(name:String!): Chatroom
+  allRoomsList: [Chatroom!]!
   allRooms: [InstatntMessage!]!
   allMessages: [Chatroom!]!
   singleRoomMessages(room: String!): [Message!]!
@@ -94,6 +103,7 @@ type Mutation {
   # chatroom schemas
   post(text: String!, username: String!, roomName: String!): Message!
   popAllChats: Boolean!
+  newRoom(roomName: String!): Chatroom!
 }
 
 directive @user(username: String!) on SUBSCRIPTION
