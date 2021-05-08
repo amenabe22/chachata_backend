@@ -41,17 +41,19 @@ func New() generated.Config {
 	client := redis.NewClient(&redis.Options{
 		Addr: "localhost:6379",
 	})
-	// retry.ForeverSleep(2*time.Second, func(_ int) error {
-	// 	_, err := client.Ping().Result()
-	// 	return err
-	// })
+	//**************************************//
+	//**************************************//
+	// Spent hours coz i forgot to do this  //
+	// Register every single resolver here  //
+	//**************************************//
+	//**************************************//
 	return generated.Config{
 		Resolvers: &graph.Resolver{
-			RedisClient: client,
-			Rooms:       map[string]*model.Chatroom{},
-			AdminChans:  map[string]*chans.CoreAdminChannel{},
-			Coredb:      setup.SetupModels(),
-			// db,
+			RedisClient:            client,
+			Rooms:                  map[string]*model.Chatroom{},
+			NotificationChans:      map[string]*chans.NotificationChannel{},
+			RoomNotificationsChans: map[string]*chans.RoomNotification{},
+			Coredb:                 setup.SetupModels(),
 		},
 		Directives: generated.DirectiveRoot{
 			User: func(ctx context.Context, obj interface{}, next graphql.Resolver, username string) (res interface{}, err error) {

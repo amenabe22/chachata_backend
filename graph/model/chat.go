@@ -9,6 +9,12 @@ type Message struct {
 	CreatedAt time.Time `json:"createdAt"`
 }
 
+type Notifications struct {
+	ID   string `json:"id"`
+	Type string `json:"type"`
+	Text string `json:"text"`
+}
+
 type Chatroom struct {
 	ID        string `json:"id"`
 	Name      string
@@ -19,6 +25,14 @@ type Chatroom struct {
 	}
 }
 
+type NotificationChannel struct {
+	ID        string `json:"id"`
+	Name      string
+	Observers map[string]struct {
+		Username string
+		Message  chan *string
+	}
+}
 type InstantMessage struct {
 	ID      string `json:"id"`
 	Name    string

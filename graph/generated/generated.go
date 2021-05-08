@@ -120,9 +120,10 @@ type ComplexityRoot struct {
 	}
 
 	Subscription struct {
-		AdminsNotified    func(childComplexity int) int
-		MessageAdded      func(childComplexity int, roomName string, username string) int
-		UsersNotification func(childComplexity int) int
+		MessageAdded     func(childComplexity int, roomName string, username string) int
+		NewRoomAdded     func(childComplexity int) int
+		RoomNotification func(childComplexity int) int
+		UsersNotified    func(childComplexity int) int
 	}
 
 	User struct {
@@ -157,9 +158,10 @@ type QueryResolver interface {
 	SingleRoomMessages(ctx context.Context, room string) ([]*model.Message, error)
 }
 type SubscriptionResolver interface {
-	AdminsNotified(ctx context.Context) (<-chan *string, error)
+	UsersNotified(ctx context.Context) (<-chan *model.Notifications, error)
 	MessageAdded(ctx context.Context, roomName string, username string) (<-chan *model.Message, error)
-	UsersNotification(ctx context.Context) (<-chan *model.Notifications, error)
+	RoomNotification(ctx context.Context) (<-chan *model.Notifications, error)
+	NewRoomAdded(ctx context.Context) (<-chan *model.Chatroom, error)
 }
 
 type executableSchema struct {
@@ -506,13 +508,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.UserData(childComplexity), true
 
-	case "Subscription.adminsNotified":
-		if e.complexity.Subscription.AdminsNotified == nil {
-			break
-		}
-
-		return e.complexity.Subscription.AdminsNotified(childComplexity), true
-
 	case "Subscription.messageAdded":
 		if e.complexity.Subscription.MessageAdded == nil {
 			break
@@ -525,12 +520,26 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Subscription.MessageAdded(childComplexity, args["roomName"].(string), args["username"].(string)), true
 
-	case "Subscription.usersNotification":
-		if e.complexity.Subscription.UsersNotification == nil {
+	case "Subscription.newRoomAdded":
+		if e.complexity.Subscription.NewRoomAdded == nil {
 			break
 		}
 
-		return e.complexity.Subscription.UsersNotification(childComplexity), true
+		return e.complexity.Subscription.NewRoomAdded(childComplexity), true
+
+	case "Subscription.roomNotification":
+		if e.complexity.Subscription.RoomNotification == nil {
+			break
+		}
+
+		return e.complexity.Subscription.RoomNotification(childComplexity), true
+
+	case "Subscription.usersNotified":
+		if e.complexity.Subscription.UsersNotified == nil {
+			break
+		}
+
+		return e.complexity.Subscription.UsersNotified(childComplexity), true
 
 	case "User.email":
 		if e.complexity.User.Email == nil {
@@ -735,9 +744,12 @@ input DeviceDataInput {
 }
 
 type Subscription {
-  adminsNotified: String
+  usersNotified: Notifications
   messageAdded(roomName: String!, username: String!): Message!
-  usersNotification: Notifications!
+  # debug this later
+  # usersNotification: String!
+  roomNotification: Notifications!
+  newRoomAdded: Chatroom!
 }
 
 type AuthResult {
@@ -2629,7 +2641,7 @@ func (ec *executionContext) _Query___schema(ctx context.Context, field graphql.C
 	return ec.marshalO__Schema2ᚖgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐSchema(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Subscription_adminsNotified(ctx context.Context, field graphql.CollectedField) (ret func() graphql.Marshaler) {
+func (ec *executionContext) _Subscription_usersNotified(ctx context.Context, field graphql.CollectedField) (ret func() graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -2647,7 +2659,7 @@ func (ec *executionContext) _Subscription_adminsNotified(ctx context.Context, fi
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Subscription().AdminsNotified(rctx)
+		return ec.resolvers.Subscription().UsersNotified(rctx)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2657,7 +2669,7 @@ func (ec *executionContext) _Subscription_adminsNotified(ctx context.Context, fi
 		return nil
 	}
 	return func() graphql.Marshaler {
-		res, ok := <-resTmp.(<-chan *string)
+		res, ok := <-resTmp.(<-chan *model.Notifications)
 		if !ok {
 			return nil
 		}
@@ -2665,7 +2677,7 @@ func (ec *executionContext) _Subscription_adminsNotified(ctx context.Context, fi
 			w.Write([]byte{'{'})
 			graphql.MarshalString(field.Alias).MarshalGQL(w)
 			w.Write([]byte{':'})
-			ec.marshalOString2ᚖstring(ctx, field.Selections, res).MarshalGQL(w)
+			ec.marshalONotifications2ᚖgithubᚗcomᚋamenabe22ᚋchachata_backendᚋgraphᚋmodelᚐNotifications(ctx, field.Selections, res).MarshalGQL(w)
 			w.Write([]byte{'}'})
 		})
 	}
@@ -2723,7 +2735,7 @@ func (ec *executionContext) _Subscription_messageAdded(ctx context.Context, fiel
 	}
 }
 
-func (ec *executionContext) _Subscription_usersNotification(ctx context.Context, field graphql.CollectedField) (ret func() graphql.Marshaler) {
+func (ec *executionContext) _Subscription_roomNotification(ctx context.Context, field graphql.CollectedField) (ret func() graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -2741,7 +2753,7 @@ func (ec *executionContext) _Subscription_usersNotification(ctx context.Context,
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Subscription().UsersNotification(rctx)
+		return ec.resolvers.Subscription().RoomNotification(rctx)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2763,6 +2775,51 @@ func (ec *executionContext) _Subscription_usersNotification(ctx context.Context,
 			graphql.MarshalString(field.Alias).MarshalGQL(w)
 			w.Write([]byte{':'})
 			ec.marshalNNotifications2ᚖgithubᚗcomᚋamenabe22ᚋchachata_backendᚋgraphᚋmodelᚐNotifications(ctx, field.Selections, res).MarshalGQL(w)
+			w.Write([]byte{'}'})
+		})
+	}
+}
+
+func (ec *executionContext) _Subscription_newRoomAdded(ctx context.Context, field graphql.CollectedField) (ret func() graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = nil
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Subscription",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Subscription().NewRoomAdded(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return nil
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return nil
+	}
+	return func() graphql.Marshaler {
+		res, ok := <-resTmp.(<-chan *model.Chatroom)
+		if !ok {
+			return nil
+		}
+		return graphql.WriterFunc(func(w io.Writer) {
+			w.Write([]byte{'{'})
+			graphql.MarshalString(field.Alias).MarshalGQL(w)
+			w.Write([]byte{':'})
+			ec.marshalNChatroom2ᚖgithubᚗcomᚋamenabe22ᚋchachata_backendᚋgraphᚋmodelᚐChatroom(ctx, field.Selections, res).MarshalGQL(w)
 			w.Write([]byte{'}'})
 		})
 	}
@@ -4732,12 +4789,14 @@ func (ec *executionContext) _Subscription(ctx context.Context, sel ast.Selection
 	}
 
 	switch fields[0].Name {
-	case "adminsNotified":
-		return ec._Subscription_adminsNotified(ctx, fields[0])
+	case "usersNotified":
+		return ec._Subscription_usersNotified(ctx, fields[0])
 	case "messageAdded":
 		return ec._Subscription_messageAdded(ctx, fields[0])
-	case "usersNotification":
-		return ec._Subscription_usersNotification(ctx, fields[0])
+	case "roomNotification":
+		return ec._Subscription_roomNotification(ctx, fields[0])
+	case "newRoomAdded":
+		return ec._Subscription_newRoomAdded(ctx, fields[0])
 	default:
 		panic("unknown field " + strconv.Quote(fields[0].Name))
 	}
@@ -5717,6 +5776,13 @@ func (ec *executionContext) marshalOChatroom2ᚖgithubᚗcomᚋamenabe22ᚋchach
 		return graphql.Null
 	}
 	return ec._Chatroom(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalONotifications2ᚖgithubᚗcomᚋamenabe22ᚋchachata_backendᚋgraphᚋmodelᚐNotifications(ctx context.Context, sel ast.SelectionSet, v *model.Notifications) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._Notifications(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalOString2string(ctx context.Context, v interface{}) (string, error) {

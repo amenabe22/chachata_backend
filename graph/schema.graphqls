@@ -69,9 +69,12 @@ input DeviceDataInput {
 }
 
 type Subscription {
-  adminsNotified: String
+  usersNotified: Notifications
   messageAdded(roomName: String!, username: String!): Message!
-  usersNotification: Notifications!
+  # debug this later
+  # usersNotification: String!
+  roomNotification: Notifications!
+  newRoomAdded: Chatroom!
 }
 
 type AuthResult {

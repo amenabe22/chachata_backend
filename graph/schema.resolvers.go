@@ -34,7 +34,12 @@ func (r *mutationResolver) NewUsr(ctx context.Context, input model.NewUsrInput) 
 	if err != nil {
 		return "", err
 	}
-
+	room := r.NotificationChans["users"]
+	// message := "Hey everyone we have a new User"
+	notification := model.Notifications{ID: uuid.UUIDv4(), Type: "urgent", Text: "Hey there nigga"}
+	for _, observer := range room.Observers {
+		observer.Message <- &notification
+	}
 	return token, nil
 }
 
@@ -213,6 +218,16 @@ func (r *mutationResolver) NewRoom(ctx context.Context, roomName string) (*model
 		log.Println(err)
 		return nil, err
 	}
+	// send notification
+	// notification := "Here is some message"
+	notification := model.Notifications{ID: uuid.UUIDv4(), Type: "roomNot", Text: "This is room is finna be close MF"}
+	notificationRoom := r.RoomNotificationsChans["roomNotification"]
+	if notificationRoom != nil {
+		for _, observer := range notificationRoom.Observers {
+			println(observer.Username)
+			observer.Message <- &notification
+		}
+	}
 	r.mu.Unlock()
 	// end here
 	return room, nil
@@ -364,55 +379,19 @@ func (r *queryResolver) SingleRoomMessages(ctx context.Context, room string) ([]
 	return allMes, nil
 }
 
-func (r *subscriptionResolver) AdminsNotified(ctx context.Context) (<-chan *string, error) {
-	roomId := "admins"
+func (r *subscriptionResolver) UsersNotified(ctx context.Context) (<-chan *model.Notifications, error) {
 	r.mu.Lock()
-	room := r.AdminChans[roomId]
+	roomId := "users"
+	room := r.NotificationChans[roomId]
 	if room == nil {
-		room = &chans.CoreAdminChannel{
+		room = &chans.NotificationChannel{
 			RoomId: roomId,
 			Observers: map[string]struct {
 				Username string
-				Message  chan *string
+				Message  chan *model.Notifications
 			}{},
 		}
-		r.AdminChans[roomId] = room
-	}
-	var value helpers.Export
-	r.mu.Unlock()
-
-	id := value.RandString(8)
-	events := make(chan *string, 1)
-
-	go func() {
-		<-ctx.Done()
-		r.mu.Lock()
-		delete(room.Observers, id)
-		r.mu.Unlock()
-	}()
-
-	r.mu.Lock()
-	room.Observers[id] = struct {
-		Username string
-		Message  chan *string
-	}{Username: "hey", Message: events}
-	r.mu.Unlock()
-	return events, nil
-}
-
-func (r *subscriptionResolver) UsersNotification(ctx context.Context) (<-chan *model.Notifications, error) {
-	roomId := "admins"
-	r.mu.Lock()
-	room := r.AdminChans[roomId]
-	if room == nil {
-		room = &chans.CoreAdminChannel{
-			RoomId: roomId,
-			Observers: map[string]struct {
-				Username string
-				Message  chan *string
-			}{},
-		}
-		r.AdminChans[roomId] = room
+		r.NotificationChans[roomId] = room
 	}
 	var value helpers.Export
 	r.mu.Unlock()
@@ -428,10 +407,14 @@ func (r *subscriptionResolver) UsersNotification(ctx context.Context) (<-chan *m
 	}()
 
 	r.mu.Lock()
+	room.Observers[id] = struct {
+		Username string
+		Message  chan *model.Notifications
+	}{Username: "hey", Message: events}
 	r.mu.Unlock()
 	return events, nil
-
 }
+
 func (r *subscriptionResolver) MessageAdded(ctx context.Context, roomName string, username string) (<-chan *model.Message, error) {
 	// r.mu.Lock()
 	room := r.Rooms[roomName]
@@ -469,14 +452,6 @@ func (r *subscriptionResolver) MessageAdded(ctx context.Context, roomName string
 		if !isRoominDb {
 			return nil, errors.New("Room not found")
 		}
-		// room = &model.Chatroom{
-		// 	Name: roomName,
-		// 	Observers: map[string]struct {
-		// 		Username string
-		// 		Message  chan *model.Message
-		// 	}{},
-		// }
-		// r.Rooms[roomName] = room
 	}
 	// r.mu.Unlock()
 	var value helpers.Export
@@ -500,6 +475,46 @@ func (r *subscriptionResolver) MessageAdded(ctx context.Context, roomName string
 	println(len(room.Observers), "OBSRVERS COUNT")
 	r.mu.Unlock()
 	return events, nil
+}
+
+func (r *subscriptionResolver) RoomNotification(ctx context.Context) (<-chan *model.Notifications, error) {
+	r.mu.Lock()
+	roomId := "roomNotification"
+	room := r.RoomNotificationsChans[roomId]
+	if room == nil {
+		room = &chans.RoomNotification{
+			RoomId: roomId,
+			Observers: map[string]struct {
+				Username string
+				Message  chan *model.Notifications
+			}{},
+		}
+		r.RoomNotificationsChans[roomId] = room
+	}
+	var value helpers.Export
+	r.mu.Unlock()
+
+	id := value.RandString(8)
+	events := make(chan *model.Notifications, 1)
+
+	go func() {
+		<-ctx.Done()
+		r.mu.Lock()
+		delete(room.Observers, id)
+		r.mu.Unlock()
+	}()
+
+	r.mu.Lock()
+	room.Observers[id] = struct {
+		Username string
+		Message  chan *model.Notifications
+	}{Username: "hey", Message: events}
+	r.mu.Unlock()
+	return events, nil
+}
+
+func (r *subscriptionResolver) NewRoomAdded(ctx context.Context) (<-chan *model.Chatroom, error) {
+	panic(fmt.Errorf("not implemented"))
 }
 
 // Mutation returns generated.MutationResolver implementation.

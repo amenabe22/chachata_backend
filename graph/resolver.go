@@ -14,9 +14,10 @@ import (
 // It serves as dependency injection for your app, add any dependencies you require here.
 
 type Resolver struct {
-	RedisClient *redis.Client
-	mu          sync.Mutex
-	AdminChans  map[string]*chans.CoreAdminChannel
-	Coredb      *gorm.DB
-	Rooms       map[string]*model.Chatroom
+	RedisClient            *redis.Client
+	mu                     sync.Mutex
+	NotificationChans      map[string]*chans.NotificationChannel
+	Coredb                 *gorm.DB
+	Rooms                  map[string]*model.Chatroom
+	RoomNotificationsChans map[string]*chans.RoomNotification
 }

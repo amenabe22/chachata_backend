@@ -129,7 +129,6 @@ func CheckDuplicate(phone string, username string, user User, coredb *gorm.DB) (
 	return dupStats, nil
 }
 func AddNewUsr(input NewUsrInput, coredb *gorm.DB) (string, error) {
-	// room := r.AdminChans[]
 	allUsrs := []*User{}
 
 	coredb.First(&allUsrs, "email = ?", input.Email)

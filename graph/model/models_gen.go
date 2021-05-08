@@ -24,12 +24,6 @@ type NewUsrInput struct {
 	DeviceInput *DeviceDataInput `json:"deviceInput"`
 }
 
-type Notifications struct {
-	ID   string `json:"id"`
-	Type string `json:"type"`
-	Text string `json:"text"`
-}
-
 type ProfileStarterInput struct {
 	Username string `json:"username"`
 	Name     string `json:"name"`
